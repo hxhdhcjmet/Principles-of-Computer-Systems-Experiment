@@ -1,7 +1,7 @@
 import subprocess
 import csv
 import os
-
+encoding = 'utf-8'
 # 定义测试规模 (M, K, N)
 scales = [
     (256, 256, 256),
@@ -15,7 +15,7 @@ threads = [1, 2, 4, 8,10]
 
 def run_test(m, k, n, t):
     print(f"正在测试规模 {m}x{k}x{n}, 线程 {t}...")
-    cmd = f"./matmult_v2 {m} {k} {n} {t}"
+    cmd = f"matmult_v2.exe {m} {k} {n} {t}"
     # 使用 check=True 确保程序运行成功
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     return result.stdout
