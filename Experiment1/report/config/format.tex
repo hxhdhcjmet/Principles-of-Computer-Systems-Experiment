@@ -1,0 +1,87 @@
+\usetikzlibrary{positioning, arrows.meta} % 必须有 positioning
+\definecolor{macblue}{RGB}{0, 122, 255}    % 强调蓝
+\definecolor{bglight}{RGB}{245, 245, 247}  % 极简浅灰背景
+\definecolor{darkgray}{RGB}{51, 51, 51}
+\definecolor{warningred}{RGB}{255, 59, 48} % 增加红色用于攻击/警告的强调
+% --- 超链接设置 ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=macblue,
+    urlcolor=macblue
+}
+
+% --- 页眉页脚设置 ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textcolor{macblue}{\textbf{密码学引论}}} % 左侧显示实验报告
+\fancyhead[R]{\textbf{第一次实验实验报告}} % 右侧显示实验名称
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.8pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{macblue}\leaders\hrule height \headrulewidth\hfill}}
+
+% --- 自定义高亮公式框 ---
+\newtcolorbox{coreconcept}[1][]{
+    colback=bglight,
+    colframe=macblue,
+    fonttitle=\bfseries\sffamily,
+    title=#1,
+    arc=3mm,
+    boxrule=1.2pt,
+    shadow={2mm}{-1.5mm}{0mm}{black!15},
+    left=10pt, right=10pt, top=5pt, bottom=5pt
+}
+\newtcolorbox{warningbox}[1][]{
+    colback=warningred!5,
+    colframe=warningred,
+    fonttitle=\bfseries\sffamily,
+    title=#1,
+    arc=3mm,
+    boxrule=1.2pt,
+    left=10pt, right=10pt, top=5pt, bottom=5pt
+}
+
+%--- 代码设置---
+\lstset{
+    basicstyle = \ttfamily,
+    keywordstyle = \color{blue},
+    frame = single
+}
+
+\geometry{left=2.5cm, right=2.5cm, top=3cm, bottom=3cm}
+
+
+
+%--- 新增封面 ---
+% 封面变量
+\newcommand{\ReportCourse}{密码学引论实验报告}
+\newcommand{\ReportLogo}{figure/logo_sduWithText.jpg}
+\newcommand{\ReportName}{}
+\newcommand{\ReportID}{}
+\newcommand{\ReportMajor}{}
+\newcommand{\ReportDuty}{} % 新增：分工变 %%
+
+% 封面重定义
+\renewcommand{\maketitle}{
+    \begin{titlepage}
+        \thispagestyle{empty}
+        \centering
+        \vspace*{0cm}
+        \includegraphics[width=0.5\textwidth]{\ReportLogo}
+        \par\vspace{1.5cm}
+        % 替换为通用命令：加粗+无衬线字体+大号字号（等效黑体二号）
+        {\bfseries\sffamily\Large \ReportCourse \par}
+        \vspace{3cm}
+        \renewcommand{\arraystretch}{2}
+        % 标准正文字号（等效小四）
+        \normalsize
+        \begin{tabular}{c}
+            姓名：\underline{\makebox[8cm][c]{\ReportName}} \\
+            % 姓名: \underline{\parbox{8cm}{\centering \ReportName}} \\[1em]  % 自动换行
+            学号：\underline{\makebox[8cm][c]{\ReportID}} \\
+            专业：\underline{\makebox[8cm][c]{\ReportMajor}} \\
+            分工： \underline{\parbox{8cm}{\centering \ReportDuty}} \\[1em]
+            日期：\underline{\makebox[8cm][c]{\today}} \\
+        \end{tabular}
+        \vfill
+    \end{titlepage}
+}
