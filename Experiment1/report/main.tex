@@ -6,7 +6,24 @@
 \input{config/packages}
 \input{config/format}
 \input{config/listing}
+\usepackage{listings}
+\usepackage{xcolor}
 
+\lstset{
+    language=C,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny,
+    stepnumber=1,
+    numbersep=8pt,
+    frame=single,
+    breaklines=true,
+    tabsize=4,
+    showstringspaces=false
+}
 %=== 配置封面 ===
 % \renewcommand{\ReportName}{江李阳(编写代码,修改润色实验报告)\\王健一(编写代码,撰写实验报告)\\  邱泽辉(查找文献.撰写实验报告)\\史淇(实验报告整合)}       % 合作成员
 %=== 配置封面 ===
@@ -37,9 +54,15 @@
 \input{content/13process}
 \input{content/14result}
 \input{content/15conclusion}
-
+\input{content/20environment}
+\input{content/21background}
+\input{content/22principle}
+\input{content/23process}
+\input{content/24result}
+\input{content/25conclusion}
 % ===== 附录 =====
-
+\appendix
+\input{content/appendix2}
 % ===== 参考文献 =====
 
 
