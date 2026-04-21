@@ -61,33 +61,71 @@
 \newcommand{\ReportDuty}{} % 新增：分工变 %%
 
 % 封面重定义
-=======
 %--- 新增封面 ---
 %--- 新增封面 ---
 \newcommand{\ReportMembers}{}
 
->>>>>>> Stashed changes
+=======
+%--- 新增封面 ---
+%--- 新增封面 ---
+\newcommand{\ReportCourse}{计算机系统原理}
+\newcommand{\ReportLogo}{figure/logo_sduWithText.jpg}
+\newcommand{\ReportMembers}{}
+\newcommand{\ReportMajor}{}
+\newcommand{\ReportDuty}{}
+
 \renewcommand{\maketitle}{
     \begin{titlepage}
         \thispagestyle{empty}
         \centering
-        \vspace*{0cm}
-        \includegraphics[width=0.5\textwidth]{\ReportLogo}
-        \par\vspace{1.5cm}
-        % 替换为通用命令：加粗+无衬线字体+大号字号（等效黑体二号）
-        {\bfseries\sffamily\Large \ReportCourse \par}
-        \vspace{3cm}
-        \renewcommand{\arraystretch}{2}
-        % 标准正文字号（等效小四）
-        \normalsize
-        \begin{tabular}{c}
-            姓名：\underline{\makebox[8cm][c]{\ReportName}} \\
-            % 姓名: \underline{\parbox{8cm}{\centering \ReportName}} \\[1em]  % 自动换行
-            学号：\underline{\makebox[8cm][c]{\ReportID}} \\
-            专业：\underline{\makebox[8cm][c]{\ReportMajor}} \\
-            分工： \underline{\parbox{8cm}{\centering \ReportDuty}} \\[1em]
-            日期：\underline{\makebox[8cm][c]{\today}} \\
-        \end{tabular}
+
+        \vspace*{0.5cm}
+        \includegraphics[width=0.52\textwidth]{\ReportLogo}
+
+        \vspace{2.4cm}
+
+        {\bfseries\fontsize{24pt}{30pt}\selectfont 计算机系统原理实验报告\par}
+
+        \vspace{1.0cm}
+
+        {\fontsize{16pt}{22pt}\selectfont 第一次实验\par}
+        {\fontsize{16pt}{22pt}\selectfont 基于RISC-V多平台的多线程与向量程序设计、优化及性能分析\par}
+        \vspace{2.6cm}
+
+        \makebox[\textwidth][c]{%
+        \hspace*{1.5cm}%
+        \begin{minipage}{0.72\textwidth}
+            \centering
+            \renewcommand{\arraystretch}{1.5}
+
+            \begin{tabular}{@{}r l@{}}
+                \textbf{成员：} &
+                \begin{tabular}[t]{@{}c@{\hspace{2.5cm}}c@{}}
+                    江李阳 & 202400460042 \\
+                    王健一 & 202400460037 \\
+                    邱泽辉 & 202400460046 \\
+                    史淇   & 202333180074
+                \end{tabular}
+                \\[0.9cm]
+
+                \textbf{专业：} & 密码科学与技术 \\
+                
+
+                \textbf{分工：} &
+                \begin{minipage}[t]{8.8cm}
+                    \raggedright
+                    江李阳：编写代码，修改润色实验报告\\
+                    王健一：编写代码，撰写实验报告\\
+                    邱泽辉：查找文献，撰写实验报告\\
+                    史淇：实验报告整合
+                \end{minipage}
+                \\[1.4cm]
+
+                \textbf{日期：} & 2026年4月7日 \\[0.2cm]
+            \end{tabular}
+        \end{minipage}
+        }
+
         \vfill
     \end{titlepage}
 }
