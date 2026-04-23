@@ -1,0 +1,50 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{longtable}
+\usepackage{pdflscape}
+
+% ===== 配置层 =====
+\input{config/packages}
+\input{config/format}
+\input{config/listing}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\lstset{
+    language=C,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny,
+    stepnumber=1,
+    numbersep=8pt,
+    frame=single,
+    breaklines=true,
+    tabsize=4,
+    showstringspaces=false
+}
+% ====== 在这里改配置======
+
+\renewcommand{\HeaderLeft}{计算机系统原理}
+\renewcommand{\HeaderRight}{第二次实验报告}
+
+\renewcommand{\ReportExpName}{第二次实验}
+\renewcommand{\ReportExpDetail}{NEMU模拟器及Cache行为仿真}
+
+\renewcommand{\ReportDate}{\today}
+\begin{document}
+\makecover %第一页封面放在最前面
+\tableofcontents
+\newpage
+
+
+%=====内容层======
+\input{content/10target}
+\input{content/11environment}
+\input{content/12principle}
+%=================
+
+
+
+\end{document}

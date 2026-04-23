@@ -1,0 +1,50 @@
+\section{实验原理}
+\subsection{局部性原理(Principle of Locality)}
+Cache存在的理论基础就是局部性原理:
+\begin{itemize}
+    \item 时间局部性 (Temporal Locality)：如果一个存储单元被访问，则近期内它很可能再次被访问（例如：循环变量、重复调用的函数）。
+    \item 空间局部性 (Spatial Locality)：如果一个存储单元被访问，则其邻近的存储单元近期内也很可能被访问（例如：数组遍历、顺序执行的指令）。
+\end{itemize}
+Cache 通过存放这些“活跃”数据，减少了 CPU 访问高延迟 DRAM 的次数,大大提高了系统运行效率。
+
+\subsection{Cache结构与地址拆分}
+假设Cache的块的大小为$B = 2^b$Byte,共有$S = 2^s$个组,每组有$W$路,则对于一个物理地址Addr,其逻辑地址被划分为三部分:
+\[  Addr = \text{[Tag|Index|Offset]}   \]
+\begin{itemize}
+    \item Offset(块内偏移):$b$位,决定数据在Cache\ Line中的具体字节位置。
+    \item Index(组索引):$s$位,用于定位该地址属于哪一个Set。计算公式为:
+    \[  Index = (Addr >> b)\&(S-1) \]
+    \item Tag(标志位):剩余的高位,用于区分映射到同一个组的不同内存块。
+\end{itemize}
+
+\subsection{Cache块映射方式(Address Mapping)}
+Cache地址映射方式决定了主存块如何被放置到Cache中,是Cache实现的核心:
+\begin{itemize}
+    \item 直接映射(Direct Mapping)
+    \begin{itemize}
+        \item 原理:每个主存块映射到Cache中的唯一固定一行(每组只有一行)。
+        \item 计算逻辑:$Cache\text{行号} = \text{(主存块号)} \pmod {\text{Cache总行数}}$
+        \item 地址划分:
+        \begin{itemize}
+            \item Offset:块内偏移,由块大小决定。
+            \item Index:索引位:直接对应Cache行号。
+            \item Tag:高位剩余部分,用于确定该行存放的是否是目标块。
+        \end{itemize}
+        \item 特点:硬件电路最简单,但冲突试效率高。如果两个经常访问的块映射到同一行,会发生剧烈抖动。
+    \end{itemize}
+    \item 全相联映射(Fully Associative Mapping)
+    \begin{itemize}
+        \item 原理:主存中的任意一块可以放置在 Cache 中的任意一行(因为只有一个组)。
+        \item 计算逻辑:没有 Index 字段，只需匹配 Tag。
+        \item 地址划分:只分为Tag和Offset。
+        \item 特点:冲突概率最低,空间利用率最高。但因为全相联高速缓存电路必须并行地搜索许多相匹配的标记,构造
+一个又大又快的相联高速缓存很困难,而且很昂贵,硬件成本极高,功耗大,通常只用作极小容量的存储(如TLB)。
+    \end{itemize}
+    \item 组相联映射(Set-Associative Mapping)
+    \begin{itemize}
+        \item 原理:这是前两者的折中。Cache 分为若干个组(Set)，每组包含 $k$ 个路(Way)。主存块映射到固定的组，但可以放在该组内的任意一路。
+        \item 计算逻辑:$Set Index = (\text{主存块号}) \pmod { Cache\text{组数}}$
+        \item 特点:兼顾了直接映射的低成本搜索和全相联的低冲突概率。实现时先通过组索引计算组号,组中任何一行都可以包含任何映射到这一组的内存块,所以
+必须搜索每组中每一行,寻找一个有效的行,其标记与地址中的标记相匹配。
+    \end{itemize}
+\end{itemize}
