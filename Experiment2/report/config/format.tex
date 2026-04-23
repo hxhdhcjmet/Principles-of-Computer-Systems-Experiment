@@ -1,0 +1,254 @@
+% \usetikzlibrary{positioning, arrows.meta} % 必须有 positioning
+% \definecolor{macblue}{RGB}{0, 122, 255}    % 强调蓝
+% \definecolor{bglight}{RGB}{245, 245, 247}  % 极简浅灰背景
+% \definecolor{darkgray}{RGB}{51, 51, 51}
+% \definecolor{warningred}{RGB}{255, 59, 48} % 增加红色用于攻击/警告的强调
+% % --- 超链接设置 ---
+% \hypersetup{
+%     colorlinks=true,
+%     linkcolor=macblue,
+%     urlcolor=macblue
+% }
+
+% % --- 页眉页脚设置 ---
+% \pagestyle{fancy}
+% \fancyhf{}
+% \fancyhead[L]{\textcolor{macblue}{\textbf{计算机系统原理}}} % 左侧显示实验报告
+% \fancyhead[R]{\textbf{第一次实验实验报告}} % 右侧显示实验名称
+% \fancyfoot[C]{\thepage}
+% \renewcommand{\headrulewidth}{0.8pt}
+% \renewcommand{\headrule}{\hbox to\headwidth{\color{macblue}\leaders\hrule height \headrulewidth\hfill}}
+
+% % --- 自定义高亮公式框 ---
+% \newtcolorbox{coreconcept}[1][]{
+%     colback=bglight,
+%     colframe=macblue,
+%     fonttitle=\bfseries\sffamily,
+%     title=#1,
+%     arc=3mm,
+%     boxrule=1.2pt,
+%     shadow={2mm}{-1.5mm}{0mm}{black!15},
+%     left=10pt, right=10pt, top=5pt, bottom=5pt
+% }
+% \newtcolorbox{warningbox}[1][]{
+%     colback=warningred!5,
+%     colframe=warningred,
+%     fonttitle=\bfseries\sffamily,
+%     title=#1,
+%     arc=3mm,
+%     boxrule=1.2pt,
+%     left=10pt, right=10pt, top=5pt, bottom=5pt
+% }
+
+% %--- 代码设置---
+% \lstset{
+%     basicstyle = \ttfamily,
+%     keywordstyle = \color{blue},
+%     frame = single
+% }
+
+% \geometry{left=2.5cm, right=2.5cm, top=3cm, bottom=3cm}
+
+
+% % 封面重定义
+% %--- 新增封面 ---
+% %--- 新增封面 ---
+% \newcommand{\ReportMembers}{}
+
+% %--- 新增封面 ---
+% %--- 新增封面 ---
+% \newcommand{\ReportCourse}{计算机系统原理}
+% \newcommand{\ReportLogo}{figure/logo_sduWithText.jpg}
+% \newcommand{\ReportMembers}{}
+% \newcommand{\ReportMajor}{}
+% \newcommand{\ReportDuty}{}
+
+% \renewcommand{\maketitle}{
+%     \begin{titlepage}
+%         \thispagestyle{empty}
+%         \centering
+
+%         \vspace*{0.5cm}
+%         \includegraphics[width=0.52\textwidth]{\ReportLogo}
+
+%         \vspace{2.4cm}
+
+%         {\bfseries\fontsize{24pt}{30pt}\selectfont 计算机系统原理实验报告\par}
+
+%         \vspace{1.0cm}
+
+%         {\fontsize{16pt}{22pt}\selectfont 第一次实验\par}
+%         {\fontsize{16pt}{22pt}\selectfont 基于RISC-V多平台的多线程与向量程序设计、优化及性能分析\par}
+%         \vspace{2.6cm}
+
+%         \makebox[\textwidth][c]{%
+%         \hspace*{1.5cm}%
+%         \begin{minipage}{0.72\textwidth}
+%             \centering
+%             \renewcommand{\arraystretch}{1.5}
+
+%             \begin{tabular}{@{}r l@{}}
+%                 \textbf{成员：} &
+%                 \begin{tabular}[t]{@{}c@{\hspace{2.5cm}}c@{}}
+%                     江李阳 & 202400460042 \\
+%                     王健一 & 202400460037 \\
+%                     邱泽辉 & 202400460046 \\
+%                     史淇   & 202333180074
+%                 \end{tabular}
+%                 \\[0.9cm]
+
+%                 \textbf{专业：} & 密码科学与技术 \\
+                
+
+%                 \textbf{分工：} &
+%                 \begin{minipage}[t]{8.8cm}
+%                     \raggedright
+%                     江李阳：编写代码，修改润色实验报告\\
+%                     王健一：编写代码，撰写实验报告\\
+%                     邱泽辉：查找文献，撰写实验报告\\
+%                     史淇：实验报告整合
+%                 \end{minipage}
+%                 \\[1.4cm]
+
+%                 \textbf{日期：} & 2026年4月7日 \\[0.2cm]
+%             \end{tabular}
+%         \end{minipage}
+%         }
+
+%         \vfill
+%     \end{titlepage}
+% }
+% ================== 可配置参数（默认值，可在 main.tex 中覆盖） ==================
+
+\providecommand{\HeaderLeft}{计算机系统原理}
+\providecommand{\HeaderRight}{实验报告}
+
+\providecommand{\ReportTitle}{计算机系统原理实验报告}
+\providecommand{\ReportExpName}{第一次实验}
+\providecommand{\ReportExpDetail}{基于RISC-V多平台的多线程与向量程序设计、优化及性能分析}
+
+\providecommand{\ReportLogo}{figure/logo_sduWithText.jpg}
+
+\providecommand{\ReportMembers}{
+    江李阳 & 202400460042 \\
+    王健一 & 202400460037 \\
+    邱泽辉 & 202400460046 \\
+    史淇   & 202333180074
+}
+
+\providecommand{\ReportMajor}{密码科学与技术}
+\providecommand{\ReportDate}{2026年4月7日}
+
+
+% ================== 颜色 ==================
+\definecolor{macblue}{RGB}{0, 122, 255}
+\definecolor{bglight}{RGB}{245, 245, 247}
+\definecolor{darkgray}{RGB}{51, 51, 51}
+\definecolor{warningred}{RGB}{255, 59, 48}
+
+
+% ================== 超链接 ==================
+\hypersetup{
+    colorlinks=true,
+    linkcolor=macblue,
+    urlcolor=macblue
+}
+
+
+% ================== 页眉页脚 ==================
+\pagestyle{fancy}
+\fancyhf{}
+
+\fancyhead[L]{\textcolor{macblue}{\textbf{\HeaderLeft}}}
+\fancyhead[R]{\textbf{\HeaderRight}}
+
+\fancyfoot[C]{\thepage}
+
+\renewcommand{\headrulewidth}{0.8pt}
+\renewcommand{\headrule}{
+    \hbox to\headwidth{\color{macblue}\leaders\hrule height \headrulewidth\hfill}
+}
+
+
+% ================== tcolorbox ==================
+\newtcolorbox{coreconcept}[1][]{
+    colback=bglight,
+    colframe=macblue,
+    fonttitle=\bfseries\sffamily,
+    title=#1,
+    arc=3mm,
+    boxrule=1.2pt,
+    shadow={2mm}{-1.5mm}{0mm}{black!15},
+    left=10pt, right=10pt, top=5pt, bottom=5pt
+}
+
+\newtcolorbox{warningbox}[1][]{
+    colback=warningred!5,
+    colframe=warningred,
+    fonttitle=\bfseries\sffamily,
+    title=#1,
+    arc=3mm,
+    boxrule=1.2pt,
+    left=10pt, right=10pt, top=5pt, bottom=5pt
+}
+
+
+% ================== 代码样式 ==================
+\lstset{
+    basicstyle = \ttfamily,
+    keywordstyle = \color{blue},
+    frame = single
+}
+
+
+% ================== 页面边距 ==================
+\geometry{left=2.5cm, right=2.5cm, top=3cm, bottom=3cm}
+
+
+% ================== TikZ库 ==================
+\usetikzlibrary{positioning, arrows.meta}
+
+
+% ================== 封面 ==================
+\newcommand{\makecover}{
+    \begin{titlepage}
+        \thispagestyle{empty}
+        \centering
+
+        \vspace*{0.5cm}
+        \includegraphics[width=0.52\textwidth]{\ReportLogo}
+
+        \vspace{2.4cm}
+
+        {\bfseries\fontsize{24pt}{30pt}\selectfont \ReportTitle\par}
+
+        \vspace{1.0cm}
+
+        {\fontsize{16pt}{22pt}\selectfont \ReportExpName\par}
+        {\fontsize{16pt}{22pt}\selectfont \ReportExpDetail\par}
+
+        \vspace{2.6cm}
+
+        \makebox[\textwidth][c]{%
+        \hspace*{1.5cm}%
+        \begin{minipage}{0.72\textwidth}
+            \centering
+            \renewcommand{\arraystretch}{1.5}
+
+            \begin{tabular}{@{}r l@{}}
+                \textbf{成员：} &
+                \begin{tabular}[t]{@{}c@{\hspace{2.5cm}}c@{}}
+                    \ReportMembers
+                \end{tabular}
+                \\[0.9cm]
+
+                \textbf{专业：} & \ReportMajor \\
+
+                \textbf{日期：} & \ReportDate \\[0.2cm]
+            \end{tabular}
+        \end{minipage}
+        }
+
+        \vfill
+    \end{titlepage}
+}
