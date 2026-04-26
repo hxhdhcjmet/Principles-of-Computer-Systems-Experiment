@@ -1,0 +1,71 @@
+\subsection{NEMU 获取内存访问序列}
+
+本实验首先需要获得待分析程序在运行过程中的内存访问序列。由于直接在真实硬件上观察每一次内存读写较为困难，因此实验使用 NEMU 模拟器运行矩阵乘法程序，并通过日志功能记录程序执行过程中的访存行为，生成 trace.log 文件。该文件随后作为 Cache 模拟器的输入，用于统计不同 Cache 配置下的命中次数和缺失次数。
+
+\subsubsection{AM 环境下编译 workload}
+
+香山实验环境部署完成后，首先进入 xs-env 目录并配置环境变量：
+
+\begin{lstlisting}[language=bash]
+cd ~/xs-env
+source ./env.sh
+\end{lstlisting}
+
+随后进入 AM 提供的 hello 示例程序目录，将其中的 hello.c 替换为本次实验使用的矩阵乘法程序：
+
+\begin{lstlisting}[language=bash]
+cd ~/xs-env/nexus-am/apps/hello
+make ARCH=riscv64-xs -j8
+\end{lstlisting}
+
+编译成功后，在 build 目录下可以得到如下文件：
+
+\begin{itemize}
+    \item \texttt{hello-riscv64-xs.elf}：应用程序的 ELF 文件；
+    \item \texttt{hello-riscv64-xs.bin}：可由 NEMU 加载运行的二进制镜像；
+    \item \texttt{hello-riscv64-xs.txt}：对应的反汇编文件。
+\end{itemize}
+
+其中，后续实验主要使用 \texttt{hello-riscv64-xs.bin} 作为 NEMU 的运行输入。
+
+\subsubsection{编译并配置 NEMU 模拟器}
+
+进入 NEMU 目录后，首先进行基本配置和编译：
+
+\begin{lstlisting}[language=bash]
+cd ~/xs-env/NEMU
+make clean
+make riscv64-xs_defconfig
+make menuconfig
+make -j
+\end{lstlisting}
+
+由于 NEMU 默认不一定开启访存日志功能，因此需要在 \texttt{make menuconfig} 中开启相关调试选项。具体路径为：
+
+\begin{lstlisting}[language=bash]
+Testing and Debugging
+[*] Enable Log for memory
+[*] Enable Log for tracing instructions
+\end{lstlisting}
+
+其中，\texttt{Enable Log for memory} 用于记录内存读写行为，\texttt{Enable Log for tracing instructions} 用于记录指令执行过程。修改配置后，需要重新执行：
+
+\begin{lstlisting}[language=bash]
+make -j
+\end{lstlisting}
+
+使新的配置生效。
+
+\subsubsection{运行程序并生成 trace.log}
+
+NEMU 编译完成后，使用如下命令运行矩阵乘法程序：
+
+\begin{lstlisting}[language=bash]
+./build/riscv64-nemu-interpreter \
+-b ~/xs-env/nexus-am/apps/hello/build/hello-riscv64-xs.bin \
+-l trace.log
+\end{lstlisting}
+
+其中，\texttt{-b} 参数用于指定待运行的二进制镜像，\texttt{-l} 参数用于指定日志输出文件。程序运行结束后，NEMU 会在当前目录下生成 \texttt{trace.log} 文件，该文件记录了程序执行过程中的访存地址、访存类型等信息。
+
+本实验分别修改矩阵规模，生成了矩阵大小为 $N=32$、$N=64$、$N=128$ 时的三组 trace 文件，并将其作为后续 Cache 模拟器分析的输入。

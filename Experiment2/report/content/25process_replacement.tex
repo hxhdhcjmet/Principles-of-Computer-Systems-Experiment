@@ -1,0 +1,58 @@
+\subsection{替换算法对 Cache 命中率的影响}
+
+当 Cache 发生 Miss 且目标 Set 已满时，需要根据替换算法选择一个 Cache Line 换出。不同替换算法对程序局部性的利用程度不同，因此可能会对 Cache 命中率产生影响。本组实验对比 FIFO 和 LRU 两种替换策略在相同 Cache 配置下的表现。
+
+\subsubsection{实验设计}
+
+本组实验采用矩阵规模为 $N=128$ 时生成的 trace.log 作为输入，固定 Cache 块大小为 64B，映射方式为 4 路组相联，分别测试 FIFO 和 LRU 两种替换算法下的 Cache 命中率。
+
+实验固定参数如下：
+
+\begin{itemize}
+    \item 矩阵规模：$N=128$；
+    \item Cache 块大小：64B；
+    \item 映射方式：4 路组相联；
+    \item 输入文件：$N=128$ 时由 NEMU 生成的 trace.log。
+\end{itemize}
+
+变化参数为替换算法：
+
+\begin{itemize}
+    \item FIFO：先进先出替换算法；
+    \item LRU：最近最少使用替换算法。
+\end{itemize}
+
+\subsubsection{实验结果}
+
+\begin{table}[H]
+\centering
+\caption{FIFO 与 LRU 替换算法对命中率的影响}
+\begin{tabular}{c|c|c|c}
+\hline
+Cache 大小 & 替换算法 & 命中率(\%) & Miss 数 \\
+\hline
+16KB & FIFO & -- & -- \\
+16KB & LRU  & -- & -- \\
+32KB & FIFO & -- & -- \\
+32KB & LRU  & -- & -- \\
+64KB & FIFO & -- & -- \\
+64KB & LRU  & -- & -- \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{实验现象与分析}
+
+FIFO 算法按照 Cache Line 进入 Cache 的先后顺序进行替换。当某个 Set 已满时，FIFO 总是替换最早进入该 Set 的 Cache Line。这种策略实现简单，但它没有考虑数据块最近是否被访问过，因此可能会将仍然具有较高时间局部性的数据块换出。
+
+LRU 算法则根据最近访问情况进行替换。当某个 Set 已满时，LRU 会优先替换最长时间没有被访问的 Cache Line。该算法的设计思想更符合时间局部性原理：如果一个数据块最近被访问过，那么它在短时间内再次被访问的概率通常较高，因此应尽量保留在 Cache 中。
+
+对于矩阵乘法程序而言，访问序列具有一定规律性。矩阵 A 的访问通常具有较好的空间局部性，矩阵 C 的累加访问具有一定时间局部性，而矩阵 B 在普通三重循环实现中可能存在跨行访问，空间局部性较差。因此，LRU 在能够捕捉近期重复访问的数据时，通常会比 FIFO 获得更好的命中率。
+
+但是，LRU 并不一定在所有情况下都显著优于 FIFO。当程序访存模式接近顺序扫描，或者 Cache Miss 主要由容量不足造成时，替换算法本身能够发挥的作用会受到限制。在这种情况下，即使使用 LRU，也无法避免大量容量缺失。
+
+\subsubsection{实验总结}
+
+通过 FIFO 和 LRU 的对比可以看出，LRU 是一种较好的通用 Cache 替换策略。它能够根据最近访问历史保留更可能再次被访问的数据块，因此通常比 FIFO 更符合程序的时间局部性。
+
+不过，LRU 的优势依赖于程序是否存在明显的时间局部性。如果程序的工作集远大于 Cache 容量，或者访存序列缺少重复访问，那么替换算法对命中率的改善就会比较有限。因此，LRU 可以认为是一种较好的替换算法，但并不是在所有场景下都能带来显著提升。

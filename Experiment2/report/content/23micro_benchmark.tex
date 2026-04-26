@@ -1,0 +1,99 @@
+\subsection{Cache 模拟器正确性验证}
+
+为了验证自行编写的 Cache 模拟器是否正确，本实验采用 micro-benchmarking 的方法，构造若干组规模较小、访问规律明确的访存序列，并人工推导其理论 Hit/Miss 结果，再与模拟器输出结果进行对比。
+
+这种验证方法的优点是访存序列简单、预期结果明确，能够分别检查 Cache 模拟器中的块内偏移处理、地址映射、冲突缺失和替换算法等核心逻辑是否正确。
+
+\subsubsection{测试一：重复访问同一地址}
+
+首先构造最简单的重复访问序列，用于验证 Cache 的基本装入和命中判断逻辑。
+
+\begin{itemize}
+    \item Cache 容量：64B；
+    \item Cache 块大小：16B；
+    \item 映射方式：直接映射；
+    \item 访问序列：\texttt{0x00, 0x00, 0x00}。
+\end{itemize}
+
+第一次访问 \texttt{0x00} 时，Cache 中尚未装入对应数据块，因此发生 Miss；随后两次访问仍然访问同一地址，对应数据块已经在 Cache 中，因此均为 Hit。理论结果为：
+
+\[
+Miss = 1,\quad Hit = 2
+\]
+
+\subsubsection{测试二：访问同一 Cache 块内的不同地址}
+
+第二组测试用于验证块大小和块内偏移处理是否正确。
+
+\begin{itemize}
+    \item Cache 容量：64B；
+    \item Cache 块大小：16B；
+    \item 映射方式：直接映射；
+    \item 访问序列：\texttt{0x00, 0x04, 0x08, 0x0C}。
+\end{itemize}
+
+由于块大小为 16B，地址 \texttt{0x00}、\texttt{0x04}、\texttt{0x08}、\texttt{0x0C} 都位于同一个 Cache Block 内。因此第一次访问发生 Miss，后续三次访问均应命中。理论结果为：
+
+\[
+Miss = 1,\quad Hit = 3
+\]
+
+\subsubsection{测试三：直接映射冲突}
+
+第三组测试用于验证直接映射下的冲突缺失处理是否正确。
+
+\begin{itemize}
+    \item Cache 容量：64B；
+    \item Cache 块大小：16B；
+    \item Cache 行数：4；
+    \item 映射方式：直接映射；
+    \item 访问序列：\texttt{0x00, 0x40, 0x00}。
+\end{itemize}
+
+由于 Cache 容量为 64B，块大小为 16B，因此共有 4 个 Cache Line。地址 \texttt{0x00} 和 \texttt{0x40} 对应的主存块号分别为 0 和 4，二者对 Cache 行数取模后都映射到第 0 行。因此访问 \texttt{0x40} 会替换掉原先的 \texttt{0x00}，再次访问 \texttt{0x00} 时仍然发生 Miss。理论结果为：
+
+\[
+Miss = 3,\quad Hit = 0
+\]
+
+\subsubsection{测试四：LRU 替换策略验证}
+
+第四组测试用于验证 LRU 替换算法是否正确。
+
+\begin{itemize}
+    \item Cache 容量：32B；
+    \item Cache 块大小：16B；
+    \item 相联度：2 路组相联；
+    \item Cache 组数：1；
+    \item 替换算法：LRU；
+    \item 访问序列：\texttt{0x00, 0x10, 0x00, 0x20}。
+\end{itemize}
+
+该配置下 Cache 只有一个 Set，且该 Set 中有两个 Cache Line。首先访问 \texttt{0x00} 和 \texttt{0x10}，两者分别装入两个 Cache Line；随后再次访问 \texttt{0x00}，使得 \texttt{0x00} 成为最近使用的数据块；最后访问 \texttt{0x20} 时，该 Set 已满，根据 LRU 策略应替换最久未被访问的 \texttt{0x10}，而不是 \texttt{0x00}。
+
+因此该访问序列的理论结果为：
+
+\[
+Miss = 3,\quad Hit = 1
+\]
+
+\subsubsection{验证结果汇总}
+
+将上述测试序列输入 Cache 模拟器后，模拟器输出结果与人工推导结果一致，说明模拟器在基本命中判断、块内偏移处理、直接映射冲突处理以及 LRU 替换逻辑方面均能够正确工作。
+
+\begin{table}[H]
+\centering
+\caption{Cache 模拟器正确性验证结果}
+\begin{tabular}{c|c|c|c}
+\hline
+测试编号 & 测试目的 & 理论结果 & 验证结果 \\
+\hline
+1 & 重复访问同一地址 & Miss=1, Hit=2 & 一致 \\
+2 & 同一块内连续访问 & Miss=1, Hit=3 & 一致 \\
+3 & 直接映射冲突 & Miss=3, Hit=0 & 一致 \\
+4 & LRU 替换策略 & Miss=3, Hit=1 & 一致 \\
+\hline
+\end{tabular}
+\end{table}
+
+通过以上 micro-benchmarking 验证，可以说明 Cache 模拟器的核心逻辑是正确的。随后再使用 NEMU 生成的大规模 trace.log 进行实验分析时，所得 Hit/Miss 统计结果具有较好的可信度。

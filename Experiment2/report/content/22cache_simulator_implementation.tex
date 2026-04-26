@@ -1,0 +1,125 @@
+\subsection{Cache 模拟器设计与实现}
+
+在获得 NEMU 输出的内存访问序列 trace.log 后，本实验进一步编写 Cache 模拟器，对 trace 中记录的访存地址进行逐条模拟访问，从而统计不同 Cache 配置下的 Hit 次数、Miss 次数和命中率。
+
+Cache 模拟器的核心目标并不是模拟完整处理器，而是抽象出 Cache 的基本工作机制，包括地址拆分、组索引计算、Tag 匹配、命中判断以及缺失后的替换过程。通过这种方式，可以在软件层面观察不同 Cache 参数对程序访存性能的影响。
+
+\subsubsection{模拟器输入与输出}
+
+Cache 模拟器的输入为 NEMU 生成的 trace.log 文件。该文件记录了程序运行过程中的访存行为，模拟器从中提取访存地址，并按照给定 Cache 配置依次进行访问模拟。
+
+模拟器的输出主要包括：
+
+\begin{itemize}
+    \item 总访存次数；
+    \item Cache Hit 次数；
+    \item Cache Miss 次数；
+    \item Cache 命中率；
+    \item 不同配置下的统计结果对比。
+\end{itemize}
+
+其中，命中率的计算公式为：
+
+\[
+HitRate = \frac{Hit}{Hit + Miss} \times 100\%
+\]
+
+\subsubsection{Cache 参数设计}
+
+本实验中的 Cache 模拟器支持对以下参数进行调整：
+
+\begin{itemize}
+    \item \texttt{cache\_size}：Cache 总容量；
+    \item \texttt{block\_size}：Cache 块大小；
+    \item \texttt{associativity}：相联度，即每组包含的 Cache Line 数；
+    \item \texttt{replacement\_policy}：替换算法，包括 FIFO 和 LRU；
+    \item \texttt{set\_num}：Cache 组数。
+\end{itemize}
+
+其中，Cache 组数由 Cache 总容量、块大小和相联度共同决定：
+
+\[
+set\_num = \frac{cache\_size}{block\_size \times associativity}
+\]
+
+通过改变 \texttt{associativity} 的取值，可以统一表示不同的映射方式：
+
+\begin{itemize}
+    \item 当 \texttt{associativity = 1} 时，Cache 为直接映射；
+    \item 当 \texttt{associativity = k} 时，Cache 为 $k$ 路组相联；
+    \item 当 \texttt{set\_num = 1} 时，Cache 为全相联映射。
+\end{itemize}
+
+\subsubsection{地址拆分与映射过程}
+
+对于一条访存地址 \texttt{addr}，模拟器首先根据块大小计算其所属的主存块号：
+
+\[
+block\_addr = \left\lfloor \frac{addr}{block\_size} \right\rfloor
+\]
+
+随后根据 Cache 组数计算组索引：
+
+\[
+set\_index = block\_addr \bmod set\_num
+\]
+
+最后计算 Tag：
+
+\[
+tag = \left\lfloor \frac{block\_addr}{set\_num} \right\rfloor
+\]
+
+因此，每一次访存都可以被映射到某一个 Cache Set 中。模拟器只需要在该组内查找是否存在相同 Tag 的有效 Cache Line，即可判断本次访问是否命中。
+
+\subsubsection{命中检查机制}
+
+模拟器处理每一条访存记录时，首先计算该地址对应的 \texttt{set\_index} 和 \texttt{tag}，然后在对应的 Cache Set 中顺序查找：
+
+\begin{enumerate}
+    \item 若存在 \texttt{valid = 1} 且 \texttt{tag} 相同的 Cache Line，则本次访问为 Hit；
+    \item 若不存在匹配项，则本次访问为 Miss；
+    \item 若发生 Miss 且该组仍有空闲 Cache Line，则直接装入新块；
+    \item 若发生 Miss 且该组已满，则根据替换算法选择一个 Cache Line 换出。
+\end{enumerate}
+
+该过程体现了 Cache 的基本工作逻辑：先利用 Index 定位组，再在组内进行 Tag 匹配，最后根据匹配结果判断命中或缺失。
+
+\subsubsection{替换算法实现}
+
+当某个 Cache Set 已满且新的内存块需要调入时，模拟器需要根据替换算法选择被换出的 Cache Line。本实验主要实现了 FIFO 和 LRU 两种策略。
+
+\paragraph{FIFO 替换算法}
+
+FIFO 即先进先出策略。该算法记录每个 Cache Line 被装入 Cache 的时间，当需要替换时，选择最早进入 Cache 的块换出。FIFO 的实现简单，但它并不关心 Cache Line 最近是否被访问过，因此可能会把仍然频繁使用的数据块换出。
+
+\paragraph{LRU 替换算法}
+
+LRU 即最近最少使用策略。该算法记录每个 Cache Line 最近一次被访问的时间，当需要替换时，选择最久没有被访问的块换出。相比 FIFO，LRU 更符合时间局部性原理，通常能够更好地保留近期可能再次访问的数据。
+
+\subsubsection{核心访问流程}
+
+Cache 模拟器的核心访问逻辑可以概括如下：
+
+\begin{lstlisting}[language=C, caption={Cache 访问模拟的核心逻辑}]
+AccessCache(addr):
+    block_addr = addr / block_size
+    set_index  = block_addr % set_num
+    tag        = block_addr / set_num
+
+    for each line in cache[set_index]:
+        if line.valid == true and line.tag == tag:
+            hit++
+            update_lru_information()
+            return
+
+    miss++
+
+    if there is an empty line in cache[set_index]:
+        fill the empty line with new tag
+    else:
+        victim = select_victim_by_policy()
+        replace victim line with new tag
+\end{lstlisting}
+
+由此可见，Cache 模拟器的关键在于正确实现地址映射和替换逻辑。只要 trace.log 的访存地址能够被正确解析，模拟器就可以在不同 Cache 参数下重复运行，从而获得可比较的实验数据。
