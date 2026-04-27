@@ -31,15 +31,23 @@
 \hline
 Cache 大小 & 替换算法 & 命中率(\%) & Miss 数 \\
 \hline
-16KB & FIFO & -- & -- \\
-16KB & LRU  & -- & -- \\
-32KB & FIFO & -- & -- \\
-32KB & LRU  & -- & -- \\
-64KB & FIFO & -- & -- \\
-64KB & LRU  & -- & -- \\
+16KB & FIFO & 49.76 &2136344 \\
+16KB & LRU  & 49.75 & 2136615 \\
+32KB & FIFO & 49.77 & 2135968 \\
+32KB & LRU  & 49.76 & 2136208 \\
+64KB & FIFO & 97.27 & 116087 \\
+64KB & LRU  & 97.26 & 116568 \\
+128KB & FIFO & 99.85 & 6174 \\
+128KB & LRU  & 99.83 & 7200 \\
 \hline
 \end{tabular}
 \end{table}
+实验数据绘制如下图:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width = 1\textwidth]{figure/replacement_policy_impact.png}
+    \caption{替换策略对Cache命中率的影响}
+\end{figure}
 
 \subsubsection{实验现象与分析}
 

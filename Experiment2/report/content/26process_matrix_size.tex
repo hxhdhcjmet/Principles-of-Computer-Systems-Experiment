@@ -61,16 +61,24 @@ $N=128$ & 64KB & 192KB \\
 \hline
 矩阵规模 & Cache 大小 & 命中率(\%) & Miss 数 \\
 \hline
-$N=32$  & 32KB & -- & -- \\
-$N=64$  & 32KB & -- & -- \\
-$N=128$ & 32KB & -- & -- \\
+$N=32$  & 32KB & 99.70 &  208 \\
+$N=64$  & 32KB & 99.71 & 1566 \\
+$N=128$ & 32KB & 49.77  & 2135968 \\
 \hline
-$N=32$  & 64KB & -- & -- \\
-$N=64$  & 64KB & -- & -- \\
-$N=128$ & 64KB & -- & -- \\
+$N=32$  & 64KB & 99.70 & 208 \\
+$N=64$  & 64KB & 99.85 & 1566 \\
+$N=128$ & 64KB & 97.27 & 116087 \\
 \hline
 \end{tabular}
 \end{table}
+
+实验数据绘图如下图:
+\begin{figure}[H]
+     \centering
+    \includegraphics[width = 1\textwidth]{figure/matrix_size_impact.png}
+    \caption{矩阵规模对Cache命中率影响}
+\end{figure}
+
 
 \subsubsection{实验现象与分析}
 

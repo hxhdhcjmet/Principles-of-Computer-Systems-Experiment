@@ -9,9 +9,10 @@
 本实验固定如下参数：
 
 \begin{itemize}
-    \item 矩阵规模：$N=128$；
-    \item Cache 块大小：64B；
-    \item 替换算法：LRU；
+    \item Cache大小:$N = 64KB$; %Cache大小为32KB时1、2、4、8路组相联的hit rate都很小(49%左右)，full时上了95,此时不太好说明影响(如果需要可以加上)
+    \item 矩阵规模:$N=128$;
+    \item Cache 块大小:64B;
+    \item 替换算法:LRU;
     \item 输入文件：$N=128$ 时由 NEMU 生成的 trace.log。
 \end{itemize}
 
@@ -36,14 +37,20 @@
 \hline
 Cache 大小 & 相联度 & 映射方式 & 命中率(\%) & Miss 数 \\
 \hline
-64KB & 1 路 & 直接映射 & -- & -- \\
-64KB & 2 路 & 2 路组相联 & -- & -- \\
-64KB & 4 路 & 4 路组相联 & -- & -- \\
-64KB & 8 路 & 8 路组相联 & -- & -- \\
-64KB & 全相联 & 全相联映射 & -- & -- \\
+64KB & 1 路 & 直接映射 & 97.83 & 92177 \\
+64KB & 2 路 & 2 路组相联 & 98.16 & 78164 \\
+64KB & 4 路 & 4 路组相联 & 97.26 & 116087 \\
+64KB & 8 路 & 8 路组相联 & 95.46 & 192655 \\
+64KB & 全相联 & 全相联映射 & 96.79 & 136480 \\
 \hline
 \end{tabular}
 \end{table}
+实验数据绘制如下柱状图:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width = 1\textwidth]{figure/associativity_impact.png}
+    \caption{相联度对Cache命中率的影响(Cache capacity = 64KB,Cache block = 64B)}
+\end{figure}
 
 \subsubsection{实验现象与分析}
 
