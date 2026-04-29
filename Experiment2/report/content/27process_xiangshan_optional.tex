@@ -1,0 +1,127 @@
+\subsection{香山 Cache 性能计数器统计与对比（选做）}
+
+除了使用自行编写的 Cache 模拟器分析 trace.log 外，本实验进一步尝试使用香山仿真环境中的性能计数器统计 Cache 相关行为。该部分作为选做实验，用于从更接近真实处理器微结构的角度观察程序的 Cache 命中与缺失情况，并与软件 Cache 模拟器的结果进行对比分析。
+
+\subsubsection{实验原理}
+
+前文使用的 NEMU 主要用于执行 RISC-V 程序并导出访存 trace。自行编写的 Cache 模拟器则基于该 trace，以软件方式模拟 Cache 的地址映射、命中检查和替换过程。
+
+相比之下，香山仿真环境能够模拟更接近真实处理器的微结构行为。通过性能计数器，可以统计程序运行过程中的 Load 次数、Load Miss 次数、L3 访问次数以及平均访存延迟等指标。因此，香山性能计数器统计结果不仅反映访存地址序列本身，也包含处理器流水线、乱序执行、MissQueue、MSHR 等硬件机制的影响。
+
+\subsubsection{实验流程}
+
+首先进入香山目录，生成香山仿真程序：
+
+\begin{lstlisting}[language=bash]
+cd /xs-env/XiangShan
+make init
+make emu CONFIG=MinimalConfig EMU_TRACE=1 -j32
+\end{lstlisting}
+
+随后编译 NEMU，用于差分测试：
+
+\begin{lstlisting}[language=bash]
+cd /xs-env/NEMU
+make clean
+make riscv64-xs-ref_defconfig
+make -j
+\end{lstlisting}
+
+最后使用香山仿真器运行 workload，并将性能计数器信息导出到日志文件：
+
+\begin{lstlisting}[language=bash]
+./build/emu \
+-i /home/infinite/xs-env/nexus-am/apps/hello/build/hello-riscv64-xs.bin \
+--force-dump-result \
+2>&1 | tee hello_perf.log
+\end{lstlisting}
+
+其中，\texttt{hello\_perf.log} 中包含程序运行过程中的性能计数器输出，后续通过脚本提取 Cache 相关统计项。
+
+\subsubsection{性能计数器解析方法}
+
+为了从日志文件中提取性能计数器信息，本实验使用 Python 正则表达式匹配 \texttt{[PERF]} 开头的记录，并提取模块名、计数器名称和对应数值。核心解析逻辑如下：
+
+\begin{lstlisting}[language=Python, caption={香山性能计数器日志解析脚本}]
+import re
+
+PERF_RE = re.compile(
+    r"^\[PERF\]\[time=\s*(\d+)\]\s+([^:]+):\s*([^,]+),\s*(-?\d+)"
+)
+
+def parse_perf(path):
+    records = []
+    with open(path, "r", errors="ignore") as f:
+        for line in f:
+            m = PERF_RE.match(line.strip())
+            if m:
+                time, module, counter, value = m.groups()
+                records.append((module, counter, int(value)))
+    return records
+\end{lstlisting}
+
+通过该脚本可以从香山仿真日志中提取 Load 次数、Load Miss 次数、L3 访问次数和访存延迟等信息。
+
+\subsubsection{实验结果}
+
+本组选做实验分别统计了矩阵规模为 $N=32$、$N=64$、$N=128$ 时的 DCache 访存行为，结果如下：
+
+\begin{table}[H]
+\centering
+\caption{香山性能计数器统计的 DCache 访存行为}
+\begin{tabular}{c|r|r|c|r|c}
+\hline
+矩阵规模 & Load 次数 & Load Miss & Miss 率(\%) & L3 访问次数 & 平均延迟 \\
+\hline
+$N=32$  & 72,698    & 0         & 0.00  & 212  & 17 \\
+$N=64$  & 573,575   & 3,330     & 0.58  & 786  & 17 \\
+$N=128$ & 9,340,086 & 6,827,353 & 73.10 & 3092 & 17 \\
+\hline
+\end{tabular}
+\end{table}
+
+根据 Miss 率可以进一步得到命中率：
+
+\[
+HitRate = 1 - MissRate
+\]
+
+因此，当 $N=32$ 时，命中率接近 $100\%$；当 $N=64$ 时，命中率约为 $99.42\%$；当 $N=128$ 时，命中率下降到约 $26.90\%$。
+
+\begin{table}[H]
+\centering
+\caption{香山性能计数器统计的 Cache 命中率}
+\begin{tabular}{c|c|c}
+\hline
+矩阵规模 & Miss 率(\%) & 命中率(\%) \\
+\hline
+$N=32$  & 0.00  & 100.00 \\
+$N=64$  & 0.58  & 99.42 \\
+$N=128$ & 73.10 & 26.90 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{结果分析}
+
+从实验结果可以看出，随着矩阵规模增大，香山性能计数器统计得到的 Cache 命中率呈明显下降趋势。
+
+当 $N=32$ 时，矩阵数据规模较小，整个工作集可以较好地驻留在 Cache 中，因此 Load Miss 数为 0，命中率接近 $100\%$。当 $N=64$ 时，数据规模有所增加，但程序仍然具有较好的时间局部性和空间局部性，同时香山处理器具有多级 Cache 结构，因此整体 Miss 率仍然较低，仅为 $0.58\%$。
+
+当 $N=128$ 时，三个矩阵的总数据规模达到 $192KB$，已经明显超过较小 Cache 的可容纳范围。此时程序运行过程中会产生大量 Cache 替换，Load Miss 数显著增加，Miss 率达到 $73.10\%$，说明 Cache 容量和访存局部性已经成为程序性能的重要瓶颈。
+
+值得注意的是，$N=128$ 时 Load Miss 数远大于 L3 访问次数。这说明香山处理器内部并不是将每一次 Load Miss 都直接转化为一次下级存储访问，而是可能通过 MissQueue、MSHR 等机制对多个 Miss 请求进行合并，从而减少对更低层存储结构的实际访问次数。
+
+\subsubsection{与软件 Cache 模拟器结果的对比}
+
+自行编写的 Cache 模拟器是基于 NEMU 输出的访存 trace 进行顺序模拟，通常只模拟单级 Cache，并按照给定的 Cache 容量、块大小、相联度和替换算法判断 Hit/Miss。因此，该模拟器更适合用于分析 Cache 参数变化对命中率的影响。
+
+香山性能计数器则反映更接近真实乱序处理器的运行行为。其统计结果不仅受访存地址序列影响，还受到流水线执行、Load 重放、投机执行、Cache Bank 冲突、MissQueue 合并以及多级 Cache 结构等因素影响。因此，香山统计结果与软件 Cache 模拟器结果在绝对数值上不一定完全一致。
+
+例如，在矩阵规模较小时，两者都表现出较高的 Cache 命中率；而当矩阵规模增大到 $N=128$ 时，两者都显示 Cache 性能显著下降。这说明二者在趋势上具有一致性：随着工作集规模增大，Cache 容量压力上升，Cache Miss 增多。但由于两者建模层次不同，不能简单要求二者的命中率数值完全相同。
+
+\subsubsection{选做实验总结}
+
+通过香山性能计数器统计可以看出，真实处理器中的 Cache 行为比单级软件 Cache 模拟器更加复杂。软件模拟器便于控制变量，适合分析 Cache 大小、块大小、相联度和替换算法等参数的影响；香山性能计数器则能够体现更真实的处理器微结构行为，包括多级 Cache、Miss 合并和访存延迟等因素。
+
+因此，将自行编写的 Cache 模拟器与香山性能计数器结果结合起来，可以从“理想化模型”和“真实微结构”两个层面理解 Cache 行为。这也说明，Cache 命中率不仅取决于程序访存模式和 Cache 参数，还受到处理器具体实现机制的影响。
