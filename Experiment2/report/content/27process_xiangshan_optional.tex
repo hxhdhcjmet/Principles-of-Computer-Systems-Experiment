@@ -44,9 +44,12 @@ make -j
 
 \begin{lstlisting}[language=Python, caption={香山性能计数器日志解析脚本}]
 import re
+import csv
+import argparse
+from collections import defaultdict
 
 PERF_RE = re.compile(
-    r"^\[PERF\]\[time=\s*(\d+)\]\s+([^:]+):\s*([^,]+),\s*(-?\d+)"
+    r"^\[PERF \]\[time=\s*(\d+)\]\s+([^:]+):\s*([^,]+),\s*(-?\d+)"
 )
 
 def parse_perf(path):
@@ -54,10 +57,127 @@ def parse_perf(path):
     with open(path, "r", errors="ignore") as f:
         for line in f:
             m = PERF_RE.match(line.strip())
-            if m:
-                time, module, counter, value = m.groups()
-                records.append((module, counter, int(value)))
+            if not m:
+                continue
+            time, module, counter, value = m.groups()
+            records.append({
+                "time": int(time),
+                "module": module.strip(),
+                "counter": counter.strip(),
+                "value": int(value),
+                "full_name": f"{module.strip()}.{counter.strip()}",
+            })
     return records
+
+def export_csv(records, out):
+    with open(out, "w", newline="") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=["time", "module", "counter", "value", "full_name"]
+        )
+        writer.writeheader()
+        writer.writerows(records)
+
+def grep_records(records, keywords):
+    kws = [k.lower() for k in keywords]
+    return [
+        r for r in records
+        if any(k in r["full_name"].lower() for k in kws)
+    ]
+
+def sum_counter(records, suffix):
+    return sum(
+        r["value"] for r in records
+        if r["full_name"].endswith(suffix)
+    )
+
+def print_cache_summary(records):
+    print("========== Cache Summary ==========")
+
+    num_loads = sum_counter(records, "dcache.num_loads")
+    miss_queue_fire = sum_counter(records, "dcache.miss_queue_fire")
+    io_refill = sum_counter(records, "fdpMonitor.io_refill")
+
+    load_req = sum(
+        r["value"] for r in records
+        if re.search(r"dcache\.ldu_\d+\.load_req$", r["full_name"])
+    )
+    load_hit = sum(
+        r["value"] for r in records
+        if re.search(r"dcache\.ldu_\d+\.load_hit$", r["full_name"])
+    )
+    load_miss = sum(
+        r["value"] for r in records
+        if re.search(r"dcache\.ldu_\d+\.load_miss$", r["full_name"])
+    )
+
+    store_miss_alloc = sum_counter(records, "missQueue.miss_req_stor_allocate")
+    load_miss_alloc = sum_counter(records, "missQueue.miss_req_load_allocate")
+    miss_req = sum_counter(records, "missQueue.miss_req")
+    miss_req_alloc = sum_counter(records, "missQueue.miss_req_allocate")
+
+    print(f"DCache num_loads              = {num_loads}")
+    print(f"LDU load_req sum              = {load_req}")
+    print(f"LDU load_hit sum              = {load_hit}")
+    print(f"LDU load_miss sum             = {load_miss}")
+    print(f"DCache miss_queue_fire        = {miss_queue_fire}")
+    print(f"DCache io_refill              = {io_refill}")
+    print(f"MissQueue miss_req            = {miss_req}")
+    print(f"MissQueue miss_req_allocate   = {miss_req_alloc}")
+    print(f"MissQueue load miss allocate  = {load_miss_alloc}")
+    print(f"MissQueue store miss allocate = {store_miss_alloc}")
+
+    if load_req:
+        print(f"Strict load miss rate         = {load_miss / load_req * 100:.6f}%")
+    if num_loads:
+        print(f"Approx DCache miss rate       = {miss_queue_fire / num_loads * 100:.6f}%")
+
+    l3_nr = sum_counter(records, "busPMU.L3_Mem_nrRecord_all")
+    l3_lat = sum_counter(records, "busPMU.L3_Mem_latencySum_all")
+    if l3_nr:
+        print(f"L3/Mem records                = {l3_nr}")
+        print(f"L3/Mem latency sum            = {l3_lat}")
+        print(f"L3/Mem avg latency            = {l3_lat / l3_nr:.6f} cycles")
+
+    icache_refill = sum_counter(records, "icache.metaArray.meta_refill_num")
+    icache_miss_bubble = sum_counter(records, "icache.mainPipe.icache_bubble_s2_miss")
+    print(f"ICache meta_refill_num        = {icache_refill}")
+    print(f"ICache bubble_s2_miss         = {icache_miss_bubble}")
+
+def print_top(records, n=30, keywords=None):
+    selected = records
+    if keywords:
+        selected = grep_records(records, keywords)
+    selected = sorted(selected, key=lambda x: abs(x["value"]), reverse=True)
+
+    print(f"========== Top {n} Counters ==========")
+    for r in selected[:n]:
+        print(f"{r['value']:>12}  {r['full_name']}")
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("logfile")
+    ap.add_argument("--csv", default="perf.csv")
+    ap.add_argument("--grep", nargs="*", default=None)
+    ap.add_argument("--top", type=int, default=30)
+    args = ap.parse_args()
+
+    records = parse_perf(args.logfile)
+
+    print(f"Parsed PERF records: {len(records)}")
+    export_csv(records, args.csv)
+    print(f"CSV exported to: {args.csv}")
+
+    print_cache_summary(records)
+
+    if args.grep:
+        print_top(records, args.top, args.grep)
+    else:
+        print_top(records, args.top)
+
+if __name__ == "__main__":
+    main()
+
 \end{lstlisting}
 
 通过该脚本可以从香山仿真日志中提取 Load 次数、Load Miss 次数、L3 访问次数和访存延迟等信息。
