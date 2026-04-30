@@ -69,9 +69,24 @@ for (int ii = 0; ii < N; ii += BS) {
 
 其中，$BS$ 表示分块大小。与普通 IJK 算法相比，分块算法并没有改变矩阵乘法的数学结果，而是改变了程序访问内存的顺序。通过在一个较小的数据块内集中完成计算，分块算法可以提高数据被重复利用的概率，使矩阵 $A$、$B$ 和 $C$ 的局部子块尽可能停留在 Cache 中，从而减少容量缺失和替换缺失。
 
-\subsubsection{实验结果}
+\subsubsection{实验结果}\begin{table}[H]
+\centering
+\caption{相联度对 Cache 命中率的影响}
+\begin{tabular}{c|c|c}
+\hline
+Cache大小 & IJK算法命中率 & 分块算法命中率\\
+\hline
+4KB & 49.75& 96.69\\
+8KB & 49.75 & 96.69 \\
+16KB & 49.76& 98.99\\
+32KB &49.77 & 99.74\\
+64KB &97.27 &99.77 \\
+128 & 99.85&99.87\\
+\hline
+\end{tabular}
+\end{table}
 
-实验结果如图 \ref{fig:algorithm_impact} 所示。图中红色曲线表示普通 IJK 矩阵乘法，绿色曲线表示分块矩阵乘法。
+实验结果数据绘制如图 \ref{fig:algorithm_impact} 所示。图中红色曲线表示普通 IJK 矩阵乘法，绿色曲线表示分块矩阵乘法。
 
 \begin{figure}[H]
     \centering
