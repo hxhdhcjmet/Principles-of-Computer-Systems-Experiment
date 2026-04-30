@@ -1,21 +1,21 @@
-\section{实验过程}
+% \section{实验过程}
 
-本实验首先在香山仿真环境中基于 AM 编译示例程序，生成可在 NEMU 上运行的 RISC-V 裸机程序镜像；随后使用 NEMU 模拟器运行该程序，并通过开启内存访问日志功能获得程序执行过程中的内存地址访问序列，即 trace.log 文件。
+% 本实验首先在香山仿真环境中基于 AM 编译示例程序，生成可在 NEMU 上运行的 RISC-V 裸机程序镜像；随后使用 NEMU 模拟器运行该程序，并通过开启内存访问日志功能获得程序执行过程中的内存地址访问序列，即 trace.log 文件。
 
-在获得 trace.log 后，实验进一步编写 Cache 模拟器，以 trace.log 中记录的访存地址作为输入，按照给定的 Cache 容量、块大小、相联度和替换算法模拟 Cache 的访问过程，并统计总访问次数、命中次数、缺失次数以及命中率。
+% 在获得 trace.log 后，实验进一步编写 Cache 模拟器，以 trace.log 中记录的访存地址作为输入，按照给定的 Cache 容量、块大小、相联度和替换算法模拟 Cache 的访问过程，并统计总访问次数、命中次数、缺失次数以及命中率。
 
-最后，通过改变 Cache 大小、Cache 块大小、相联度、替换算法、矩阵规模以及代码实现方式，观察不同配置下 Cache 命中率和 Miss 数的变化；在选做部分进一步使用香山性能计数器统计真实处理器微结构下的 Cache 行为，并与自行编写的 Cache 模拟器结果进行对比分析。
+% 最后，通过改变 Cache 大小、Cache 块大小、相联度、替换算法、矩阵规模以及代码实现方式，观察不同配置下 Cache 命中率和 Miss 数的变化；在选做部分进一步使用香山性能计数器统计真实处理器微结构下的 Cache 行为，并与自行编写的 Cache 模拟器结果进行对比分析。
 
-本实验的总体流程如下：
+% 本实验的总体流程如下：
 
-\begin{enumerate}
-    \item 在 AM 环境中编译矩阵乘法程序，生成 RISC-V 可执行镜像；
-    \item 使用 NEMU 运行程序，并记录内存访问序列 trace.log；
-    \item 编写 Cache 模拟器，读取 trace.log 并模拟 Cache 命中与缺失过程；
-    \item 调整 Cache 参数和程序实现方式，统计不同配置下的 hit/miss 情况；
-    \item 根据实验数据分析 Cache 参数、替换算法和程序访存模式对命中率的影响。
-    \item 使用香山性能计数器统计 DCache 访存行为，并与软件 Cache 模拟器结果进行对比。
-\end{enumerate}
+% \begin{enumerate}
+%     \item 在 AM 环境中编译矩阵乘法程序，生成 RISC-V 可执行镜像；
+%     \item 使用 NEMU 运行程序，并记录内存访问序列 trace.log；
+%     \item 编写 Cache 模拟器，读取 trace.log 并模拟 Cache 命中与缺失过程；
+%     \item 调整 Cache 参数和程序实现方式，统计不同配置下的 hit/miss 情况；
+%     \item 根据实验数据分析 Cache 参数、替换算法和程序访存模式对命中率的影响。
+%     \item 使用香山性能计数器统计 DCache 访存行为，并与软件 Cache 模拟器结果进行对比。
+% \end{enumerate}
 
 \subsection{Cache大小对命中率的影响}
 \subsubsection{实验结果}
