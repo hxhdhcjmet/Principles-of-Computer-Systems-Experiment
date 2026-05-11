@@ -1,0 +1,109 @@
+\section{性能测试}
+\subsection{使用OpenSSL测试SM4算法性能}
+我们可以用openssl来测试sm4算法性能，openssl是一个开源的加密库，提供了多种加密算法的实现，包括sm4。
+
+首先是openssl的安装，可以通过以下命令安装：
+\begin{lstlisting}[style=Bash]
+brew update
+brew install openssl@3
+\end{lstlisting}
+安装完成后，我们可以使用以下命令来测试sm4算法的性能：
+\begin{lstlisting}[style=Bash]
+    openssl speed -elapsed -evp SM4-CBC
+\end{lstlisting}
+该命令会测试sm4算法在CBC模式下的性能，并输出吞吐量。测试结果如下：
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figure/openssltest.png}
+    \caption{SM4-CBC性能测试结果}
+    \label{fig:openssltest}
+\end{figure}
+OpenSSL 的 \texttt{speed} 工具并不是通过读取文件来测试算法性能，而是在内存中准备不同大小的缓冲区，然后在固定时间内反复调用 EVP 加密接口。对于每一种缓冲区大小，工具会统计在测试时间内完成的加密操作次数，并根据
+\[
+\text{吞吐率}
+=
+\frac{\text{操作次数}\times \text{缓冲区大小}}{\text{测试时间}}
+\]
+计算每秒处理的数据量。
+
+例如，对于 16 字节缓冲区，测试输出为：
+\begin{lstlisting}
+Doing SM4-CBC ops for 3s on 16 size blocks:
+12001986 SM4-CBC ops in 3.00s
+\end{lstlisting}
+
+因此其吞吐率为
+\[
+\frac{12001986 \times 16}{3.00}
+=
+64010592\ \text{bytes/s}
+\]
+即
+\[
+64010.59\ \text{kbytes/s}
+\]
+这与 OpenSSL 输出中的 \texttt{64010.59k} 一致。
+
+从测试结果可以看出，sm4算法在CBC模式下的吞吐量为64MB/s\footnote{此处1MB=1000KB}左右
+\subsection{未优化的SM4算法性能测试}
+我们接着测试未优化的SM4算法性能。代码见附录\verb|sm4_original.c|,这个代码几乎没有做优化，
+不妨叫做“教科书式”的SM4算法,我们先在MacBook M4上测试性能,然后在riscv64架构上测试性能。
+\subsubsection{MacBook M4测试结果}
+测试环境为MacBook M4,用gcc编译,编译命令如下：
+\begin{lstlisting}[style=Bash]
+    gcc -std=c11 -O0 sm4_original.c -o sm4
+\end{lstlisting}
+编译完成后，运行测试程序，得到以下输出：
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figure/original.png}
+    \caption{未优化的SM4算法性能测试结果}
+    \label{fig:sm4test}
+\end{figure}
+从测试结果可以看出，未优化的SM4算法的吞吐量为最好为47.96MB/s,低于OpenSSL的实现。
+这证明还有许多优化空间。
+\subsubsection{qemu模拟riscv64架构测试结果}
+在riscv64架构上,分别编译
+\begin{lstlisting}[style=Bash]
+    riscv64-unknown-linux-gnu-gcc -static -pthread -o sm4_original sm4.c
+    riscv64-unknown-linux-gnu-gcc -O0 -static sm4_original.c -o sm4
+    riscv64-unknown-linux-gnu-gcc -O1 -static sm4_original.c -o sm4
+    riscv64-unknown-linux-gnu-gcc -O2 -static sm4_original.c -o sm4
+    riscv64-unknown-linux-gnu-gcc -O3 -static sm4_original.c -o sm4
+\end{lstlisting}
+测试结果如下：
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figure/riscv_original_default.png}
+    \caption{未优化的SM4算法在riscv64架构上的性能测试结果}
+    \label{fig:sm4test_riscv_default}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figure/riscv_original_O0.png}
+    \caption{未优化的SM4算法在riscv64架构上使用-O0编译选项的性能测试结果}
+    \label{fig:sm4test_riscv_O0}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figure/riscv_original_O1.png}
+    \caption{未优化的SM4算法在riscv64架构上使用
+-O1编译选项的性能测试结果}
+    \label{fig:sm4test_riscv_O1}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figure/riscv_original_O2.png}
+    \caption{未优化的SM4算法在riscv64架构上使用-O2编译选项的性能测试结果}
+    \label{fig:sm4test_riscv_O2}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figure/riscv_original_O3.png}
+    \caption{未优化的SM4算法在riscv64架构上使用-O3编译选项的性能测试结果}
+    \label{fig:sm4test_riscv_O3}
+\end{figure}
+从测试结果可以看出，未优化的SM4算法在riscv64架构上的性能较差，指导书里给的编译指令，大致相当于O1优化级别,性能提升不大
+最好的结果是O3优化，吞吐量可以到34.65MB/s
+
+(保留图片还是整理为表格？图片太多感觉也不太好？)

@@ -6,3 +6,49 @@
     frame=single,
     showstringspaces=false
 }
+\definecolor{vscodeblue}{RGB}{86,156,214}
+\definecolor{vscodegreen}{RGB}{106,153,85}
+\definecolor{vscodered}{RGB}{214,157,133}
+\definecolor{vscodegray}{RGB}{128,128,128}
+
+\lstdefinestyle{vscode}{
+language=C,
+basicstyle=\ttfamily\small,
+keywordstyle=\color{vscodeblue},
+stringstyle=\color{vscodered},
+commentstyle=\color{vscodegreen},
+numbers=left,
+numberstyle=\scriptsize\color{vscodegray},
+stepnumber=1,
+numbersep=10pt,
+showstringspaces=false,
+showspaces=false,
+showtabs=false,
+breaklines=true,
+breakatwhitespace=false,
+tabsize=4,
+keepspaces=true,
+frame=none,
+columns=fullflexible,
+xleftmargin=12pt,
+xrightmargin=12pt,
+framexleftmargin=10pt,
+framexrightmargin=10pt,
+framextopmargin=5pt,
+framexbottommargin=5pt,
+aboveskip=1em,
+belowskip=1em
+}
+% 定义 Bash 样式
+\lstdefinestyle{Bash}{
+    language=bash,                % 设置语言
+    basicstyle=\ttfamily\small,   % 基础字体样式
+    keywordstyle=\color{blue},    % 关键字颜色
+    commentstyle=\color{gray},    % 注释颜色
+    stringstyle=\color{red},      % 字符串颜色
+    numbers=left,                 % 行号在左
+    numberstyle=\tiny\color{gray},% 行号样式
+    frame=single,                 % 边框
+    breaklines=true,              % 自动换行
+    showstringspaces=false        % 不显示字符串中的空格
+}

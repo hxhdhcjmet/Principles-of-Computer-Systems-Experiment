@@ -1,0 +1,56 @@
+\section{优化设计与实现}
+前面已经分析，SM4算法的主要操作就是异或,循环移位和S盒查表,因此优化的重点就是这三部分。我们可以从以下几个方面进行优化:
+\subsection{查表优化}
+SM4算法的核心就是T函数，它由L函数和S函数组成，S函数是查表实现的，L函数就是在S函数的基础上进行一些异或和循环移位操作。
+
+那么可以想到，L函数也可以纳入到查表中,我们可以预先计算出所有可能的输入对应的输出,将它们存储在一个大表中,这样在加密过程中就可以直接通过查表来得到结果,避免了重复计算。
+
+虽然查表操作涉及到内存访问，实际上是慢于异或运算和循环移位的运算的，但是我们一次查表可以代替多次的运算,因此总体上是可以提升性能的。
+
+(此处待补充，要写一个程序测试一下这几个运算的时间，cycle数？)
+
+详细代码见附录\verb|sm4_table.c|
+
+\subsubsection{运行结果}
+gcc编译如下
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figure/table.png}
+    \caption{查表优化的SM4算法性能测试结果}
+    \label{fig:sm4test_table}
+\end{figure}
+riscv上
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figure/riscv_table_default.png}
+    \caption{查表优化SM4算法在riscv64架构上的性能测试结果}
+    \label{fig:sm4test_riscv_table_default}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figure/riscv_table_O0.png}
+    \caption{查表优化SM4算法在riscv64架构上使用-O0编译选项的性能测试结果}
+    \label{fig:sm4test_riscv_table_O0}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figure/riscv_table_O1.png}
+    \caption{查表优化SM4算法在riscv64架构上使用-O1编译选项的性能测试结果}
+    \label{fig:sm4test_riscv_table_O1}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figure/riscv_table_O2.png}
+    \caption{查表优化SM4算法在riscv64架构上使用-O2编译选项的性能测试结果}
+    \label{fig:sm4test_riscv_table_O2}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figure/riscv_table_O3.png}
+    \caption{查表优化SM4算法在riscv64架构上使用-O3编译选项的性能测试结果}
+    \label{fig:sm4test_riscv_table_O3}
+\end{figure}
+
+只有O0提升了，其他全下降?
+\subsection{多线程优化}
+待补充

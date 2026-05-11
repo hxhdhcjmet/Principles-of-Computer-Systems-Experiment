@@ -1,0 +1,202 @@
+\section{实验原理}
+\subsection{SM4算法}
+输入128bit明文\(m\),按32-bit分为4个字\(X^0_0,X^1_0,X^2_0,X^3_0\)
+
+进行32轮迭代,每轮迭代计算如下:
+\[
+\begin{aligned}
+    X^0_{i} &= X^1_{i-1} \\
+    X^1_{i} &= X^2_{i-1} \\
+    X^2_{i} &= X^3_{i-1} \\
+    X^3_{i} &= X^0_{i-1} \oplus T(X^1_{i-1}\oplus X^2_{i-1}\oplus X^3_{i-1}\oplus K_{i-1})
+\end{aligned}
+\]
+对最后一轮迭代的输出进行反序变化得到密文\(c\):
+\[
+c = (X^3_{32},X^2_{32},X^1_{32},X^0_{32})
+\]
+其中\(T\)函数由非线性变换\(S\)和线性变换\(L\)组成:
+\[
+\begin{aligned}
+    T(X) &= L(S(X)) \\
+    S(X) &= S(a_0|a_1|a_2|a_3) =  (Sbox[a_0],Sbox[a_1],Sbox[a_2],Sbox[a_3]) \\
+    L(B) &= B \oplus (B <<< 2) \oplus (B <<< 10) \oplus (B <<< 18) \oplus (B <<< 24)
+\end{aligned}
+\]
+轮密钥\(K_i\)由主密钥\(K\)通过密钥扩展算法生成:
+
+先将主密钥\(K\)按32-bit分为4个字\(MK_0,MK_1,MK_2,MK_3\),然后与32-bit常量\(FK_i\)进行异或得到初始轮密钥:
+\[
+\begin{aligned}
+    K_{-4} &= MK_0 \oplus FK_0 \\
+    K_{-3} &= MK_1 \oplus FK_1 \\
+    K_{-2} &= MK_2 \oplus FK_2 \\
+    K_{-1} &= MK_3 \oplus FK_3
+\end{aligned}
+\]
+接着通过迭代计算得到后续轮密钥:
+\[
+K_i = K_{i-4} \oplus T'(K_{i-3} \oplus K_{i-2} \oplus K_{i-1} \oplus CK_i), \quad i=0,1,...,31
+\]
+其中\(T'\)函数与\(T\)函数类似,但线性变换部分不同:
+\[
+\begin{aligned}
+    T'(X) &= L'(S(X)) \\
+    L'(B) &= B \oplus (B <<< 13) \oplus (B <<< 23)
+\end{aligned}  
+\]
+\subsection{CBC模式}
+CBC模式是一种分组加密模式,它将每个明文块与前一个密文块进行异或操作后再进行加密,以增强安全性。CBC
+模式的加密过程如下:
+\[
+\begin{aligned}
+    C_0 &= E(P_0 \oplus IV) \\
+    C_i &= E(P_i \oplus C_{i-1}), \quad i \geq 1
+\end{aligned}
+\]
+其中\(P_i\)是第\(i\)个明文块,\(C_i\)是第\(i\)个密文块,\(IV\)是初始化
+向量,必须是随机的且唯一的。CBC模式通过引入IV和前一个密文块的依赖关系,使得相同的明文块在不同的位置产生不同的密文块,从而提高了加密的安全性。
+\subsection{性能分析}
+对于第 \(i\) 轮，首先需要计算
+
+\[
+X_{i+1}\oplus X_{i+2}\oplus X_{i+3}\oplus rk_i
+\]
+
+这一部分大约需要 3 次 32 位异或操作。
+
+然后进入 S 盒替换。由于输入是 32 位，可以拆分为 4 个字节：
+
+\[
+A=(a_0,a_1,a_2,a_3)
+\]
+
+每个字节经过一次 S 盒替换，因此每轮包含
+
+\[
+4 \text{ 次 S 盒查表}
+\]
+
+S 盒替换之后，需要进行线性变换：
+
+\[
+L(B)
+=
+B\oplus (B\lll 2)\oplus (B\lll 10)
+\oplus (B\lll 18)\oplus (B\lll 24)
+\]
+
+其中，\(\lll\) 表示循环左移。该线性变换大约需要 4 次循环左移和 4 次 32 位异或操作。
+
+最后，还需要与 \(X_i\) 进行一次异或：
+
+\[
+X_{i+4}=X_i\oplus L(B)
+\]
+
+因此
+\[
+\text{每轮约 }8\text{ 次 32位异或}
++
+4\text{ 次循环移位}
++
+4\text{ 次S盒查表}
+\]
+
+
+因此，单个 128 bit 分组的操作量可以近似表示为
+
+\[
+\boxed{
+T_{\text{block}}
+\approx
+256XOR + 128ROT + 128SBOX
+}
+\]
+
+其中，\(XOR\) 表示 32 位异或操作，\(ROT\) 表示 32 位循环移位操作，\(SBOX\) 表示 8 位 S 盒查表操作。相比单纯地说单分组复杂度为 \(O(1)\)，这种分析方式能够更清楚地体现 SM4 的实际计算开销。
+
+\subsubsection{密钥扩展复杂度}
+
+SM4 密钥扩展过程也需要生成 32 个轮密钥。轮密钥递推公式为
+
+\[
+K_{i+4}
+=
+K_i \oplus T'(K_{i+1}\oplus K_{i+2}\oplus K_{i+3}\oplus CK_i)
+\]
+
+其中，
+
+\[
+T'=L'\circ \tau
+\]
+
+密钥扩展中的线性变换为
+
+\[
+L'(B)=B\oplus (B\lll 13)\oplus (B\lll 23)
+\]
+
+因此，密钥扩展每轮大致包含：
+
+\[
+6 \text{ 次异或}
++
+2\text{ 次循环移位}
++
+4\text{ 次S盒查表}
+\]
+
+32 轮密钥扩展总操作量约为
+
+\[
+\boxed{
+192XOR + 64ROT + 128SBOX
+}
+\]
+
+\subsubsection{加密长度为 \(n\) 字节数据的复杂度}
+
+设明文长度为 \(n\) 字节，由于 SM4 每个分组大小为 16 字节，所以需要处理的分组数为
+
+\[
+b=\left\lceil \frac{n}{16} \right\rceil
+\]
+
+如果密钥只扩展一次，那么总操作量可以表示为
+
+\[
+T(n)
+\approx
+T_{\text{key}} + b \cdot T_{\text{block}}
+\]
+
+即
+
+\[
+T(n)
+\approx
+(192XOR + 64ROT + 128SBOX)
++
+\left\lceil \frac{n}{16} \right\rceil
+(256XOR + 128ROT + 128SBOX)
+\]
+
+因此，从渐进复杂度角度看，SM4 对长度为 \(n\) 字节的数据进行加密时，总时间复杂度为
+
+\[
+\boxed{O(n)}
+\]
+
+但是更具体地说，SM4 每处理 16 字节数据，需要进行 32 轮迭代，总共大约包含
+
+\[
+\boxed{
+256\text{ 次异或}
++
+128\text{ 次循环移位}
++
+128\text{ 次S盒查表}
+}
+\]
