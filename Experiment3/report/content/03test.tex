@@ -65,44 +65,32 @@ Doing SM4-CBC ops for 3s on 16 size blocks:
 \subsubsection{qemu模拟riscv64架构测试结果}
 在riscv64架构上,分别编译
 \begin{lstlisting}[style=Bash]
-    riscv64-unknown-linux-gnu-gcc -static -pthread -o sm4_original sm4.c
-    riscv64-unknown-linux-gnu-gcc -O0 -static sm4_original.c -o sm4
-    riscv64-unknown-linux-gnu-gcc -O1 -static sm4_original.c -o sm4
-    riscv64-unknown-linux-gnu-gcc -O2 -static sm4_original.c -o sm4
-    riscv64-unknown-linux-gnu-gcc -O3 -static sm4_original.c -o sm4
+    riscv64-unknown-linux-gnu-gcc -static -pthread -o sm4_original sm4_original.c
+    riscv64-unknown-linux-gnu-gcc -O0 -static sm4_original.c -o sm4_original_O0
+    riscv64-unknown-linux-gnu-gcc -O1 -static sm4_original.c -o sm4_original_O1
+    riscv64-unknown-linux-gnu-gcc -O2 -static sm4_original.c -o sm4_original_O2
+    riscv64-unknown-linux-gnu-gcc -O3 -static sm4_original.c -o sm4_original_O3
+\end{lstlisting}
+然后挂载
+\begin{lstlisting}[style=Bash]
+    mount -o loop rootfs.img  rootfs
+\end{lstlisting}
+复制
+\begin{lstlisting}[style=Bash]
+    cp -r ~/riscv64-linux/sm4_original  ~/riscv64-linux/rootfs/tmp
+    cp -r ~/riscv64-linux/sm4_original_O0  ~/riscv64-linux/rootfs/tmp
+    cp -r ~/riscv64-linux/sm4_original_O1  ~/riscv64-linux/rootfs/tmp
+    cp -r ~/riscv64-linux/sm4_original_O2  ~/riscv64-linux/rootfs/tmp
+    cp -r ~/riscv64-linux/sm4_original_O3  ~/riscv64-linux/rootfs/tmp
 \end{lstlisting}
 测试结果如下：
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth]{figure/riscv_original_default.png}
+    \includegraphics[width=\textwidth]{figure/riscv_original.png}
     \caption{未优化的SM4算法在riscv64架构上的性能测试结果}
     \label{fig:sm4test_riscv_default}
 \end{figure}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{figure/riscv_original_O0.png}
-    \caption{未优化的SM4算法在riscv64架构上使用-O0编译选项的性能测试结果}
-    \label{fig:sm4test_riscv_O0}
-\end{figure}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{figure/riscv_original_O1.png}
-    \caption{未优化的SM4算法在riscv64架构上使用
--O1编译选项的性能测试结果}
-    \label{fig:sm4test_riscv_O1}
-\end{figure}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{figure/riscv_original_O2.png}
-    \caption{未优化的SM4算法在riscv64架构上使用-O2编译选项的性能测试结果}
-    \label{fig:sm4test_riscv_O2}
-\end{figure}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{figure/riscv_original_O3.png}
-    \caption{未优化的SM4算法在riscv64架构上使用-O3编译选项的性能测试结果}
-    \label{fig:sm4test_riscv_O3}
-\end{figure}
+
 从测试结果可以看出，未优化的SM4算法在riscv64架构上的性能较差，指导书里给的编译指令，大致相当于O1优化级别,性能提升不大
 最好的结果是O3优化，吞吐量可以到34.65MB/s
 

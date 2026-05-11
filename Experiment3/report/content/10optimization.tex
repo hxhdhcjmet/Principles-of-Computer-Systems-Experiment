@@ -19,38 +19,40 @@ gcc编译如下
     \caption{查表优化的SM4算法性能测试结果}
     \label{fig:sm4test_table}
 \end{figure}
-riscv上
+在riscv64架构上,分别编译
+\begin{lstlisting}[style=Bash]
+    riscv64-unknown-linux-gnu-gcc -static -pthread -o sm4_table sm4_table.c
+    riscv64-unknown-linux-gnu-gcc -O0 -static sm4_table.c -o sm4_table_O0
+    riscv64-unknown-linux-gnu-gcc -O1 -static sm4_table.c -o sm4_table_O1
+    riscv64-unknown-linux-gnu-gcc -O2 -static sm4_table.c -o sm4_table_O2
+    riscv64-unknown-linux-gnu-gcc -O3 -static sm4_table.c -o sm4_table_O3
+\end{lstlisting}
+然后挂载
+\begin{lstlisting}[style=Bash]
+    mount -o loop rootfs.img  rootfs
+\end{lstlisting}
+复制
+\begin{lstlisting}[style=Bash]
+    cp -r ~/riscv64-linux/sm4_table  ~/riscv64-linux/rootfs/tmp
+    cp -r ~/riscv64-linux/sm4_table_O0  ~/riscv64-linux/rootfs/tmp
+    cp -r ~/riscv64-linux/sm4_table_O1  ~/riscv64-linux/rootfs/tmp
+    cp -r ~/riscv64-linux/sm4_table_O2  ~/riscv64-linux/rootfs/tmp
+    cp -r ~/riscv64-linux/sm4_table_O3  ~/riscv64-linux/rootfs/tmp
+\end{lstlisting}
+赋予执行权限
+\begin{lstlisting}[style=Bash]
+    chmod +x ~/riscv64-linux/rootfs/tmp/sm4_table
+    chmod +x ~/riscv64-linux/rootfs/tmp/sm4_table_O0
+    chmod +x ~/riscv64-linux/rootfs/tmp/sm4_table_O1
+    chmod +x ~/riscv64-linux/rootfs/tmp/sm4_table_O2
+    chmod +x ~/riscv64-linux/rootfs/tmp/sm4_table_O3
+\end{lstlisting}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth]{figure/riscv_table_default.png}
+    \includegraphics[width=\textwidth]{figure/riscv_table.png}
     \caption{查表优化SM4算法在riscv64架构上的性能测试结果}
     \label{fig:sm4test_riscv_table_default}
 \end{figure}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{figure/riscv_table_O0.png}
-    \caption{查表优化SM4算法在riscv64架构上使用-O0编译选项的性能测试结果}
-    \label{fig:sm4test_riscv_table_O0}
-\end{figure}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{figure/riscv_table_O1.png}
-    \caption{查表优化SM4算法在riscv64架构上使用-O1编译选项的性能测试结果}
-    \label{fig:sm4test_riscv_table_O1}
-\end{figure}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{figure/riscv_table_O2.png}
-    \caption{查表优化SM4算法在riscv64架构上使用-O2编译选项的性能测试结果}
-    \label{fig:sm4test_riscv_table_O2}
-\end{figure}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{figure/riscv_table_O3.png}
-    \caption{查表优化SM4算法在riscv64架构上使用-O3编译选项的性能测试结果}
-    \label{fig:sm4test_riscv_table_O3}
-\end{figure}
 
-只有O0提升了，其他全下降?
 \subsection{多线程优化}
 待补充
