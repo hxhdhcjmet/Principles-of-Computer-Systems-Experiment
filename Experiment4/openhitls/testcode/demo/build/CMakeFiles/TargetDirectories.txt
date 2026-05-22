@@ -1,0 +1,13 @@
+/home/orangepi/work/openhitls/testcode/demo/build/CMakeFiles/client.dir
+/home/orangepi/work/openhitls/testcode/demo/build/CMakeFiles/server.dir
+/home/orangepi/work/openhitls/testcode/demo/build/CMakeFiles/drbg.dir
+/home/orangepi/work/openhitls/testcode/demo/build/CMakeFiles/ecdh.dir
+/home/orangepi/work/openhitls/testcode/demo/build/CMakeFiles/pbkdf2.dir
+/home/orangepi/work/openhitls/testcode/demo/build/CMakeFiles/sm2enc.dir
+/home/orangepi/work/openhitls/testcode/demo/build/CMakeFiles/sm2sign.dir
+/home/orangepi/work/openhitls/testcode/demo/build/CMakeFiles/sm4cbc.dir
+/home/orangepi/work/openhitls/testcode/demo/build/CMakeFiles/hash.dir
+/home/orangepi/work/openhitls/testcode/demo/build/CMakeFiles/privpass_token.dir
+/home/orangepi/work/openhitls/testcode/demo/build/CMakeFiles/sm4cbc_origin.dir
+/home/orangepi/work/openhitls/testcode/demo/build/CMakeFiles/edit_cache.dir
+/home/orangepi/work/openhitls/testcode/demo/build/CMakeFiles/rebuild_cache.dir

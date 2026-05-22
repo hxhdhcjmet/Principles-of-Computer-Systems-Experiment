@@ -1,0 +1,2 @@
+# Empty compiler generated dependencies file for sm4cbc_origin.
+# This may be replaced when dependencies are built.
