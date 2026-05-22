@@ -1,536 +1,508 @@
-# ==============================================
-# SM4-CBC Encryption Performance Analysis & Visualization
-# Cross-platform & cross-method comprehensive comparison
-# ==============================================
-
-# ----------------------
-# 1. Import Required Libraries
-# ----------------------
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.ticker import FuncFormatter
-import seaborn as sns
 import os
 import re
 
-# ----------------------
-# 2. Configuration
-# ----------------------
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+
+
 DATA_FILES = [
-    'wsl_arch.csv',
-    'sm4_qemu_results.csv'
+    "wsl_arch.csv",
+    "sm4_qemu_results.csv",
 ]
-OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))  # current script directory
-STATISTICS_OUTPUT_PATH = os.path.join(OUTPUT_DIR, 'performance_statistics.csv')
 
-CORE_METRICS = ['time_s', 'throughput_MBps']
-GROUP_DIMENSIONS = ['target', 'variant', 'mode', 'threads', 'opt', 'compiler']
+OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))
+STATISTICS_OUTPUT_PATH = os.path.join(OUTPUT_DIR, "performance_statistics.csv")
+QEMU_STATISTICS_OUTPUT_PATH = os.path.join(OUTPUT_DIR, "qemu_riscv_statistics.csv")
+QEMU_SUMMARY_TEX_PATH = os.path.join(OUTPUT_DIR, "..", "content", "result_qemu_summary.tex")
 
-# ----------------------
-# 3. Global Plot Style (English, publication-quality)
-# ----------------------
-sns.set_style("whitegrid")
-plt.rcParams.update({
-    'font.size': 11,
-    'font.family': 'DejaVu Sans',
-    'axes.titlesize': 13,
-    'axes.labelsize': 12,
-    'xtick.labelsize': 10,
-    'ytick.labelsize': 10,
-    'legend.fontsize': 9,
-    'figure.dpi': 300,
-    'figure.figsize': (12, 7),
-    'axes.grid': True,
-    'grid.alpha': 0.25,
-    'grid.linestyle': '--',
-    'savefig.bbox': 'tight',
-    'savefig.pad_inches': 0.1,
-})
+CORE_NUMERIC_COLUMNS = [
+    "threads",
+    "data_len",
+    "loop",
+    "time_s",
+    "data_bytes",
+    "throughput_MBps",
+    "throughput_MiBps",
+]
 
-# Unified color palette for categories
-COLORS = {
-    'wsl-arch': '#1f77b4',
-    'qemu-riscv': '#ff7f0e',
-    'single_original': '#d62728',
-    'single_table': '#2ca02c',
-    'multibuffer_original': '#9467bd',
-    'multibuffer_table': '#8c564b',
-    'decrypt_parallel_original': '#e377c2',
-    'decrypt_parallel_table': '#17becf',
-    'O0': '#1b9e77',
-    'O1': '#d95f02',
-    'O2': '#7570b3',
-    'O3': '#e7298a',
+VARIANT_ORDER = [
+    "single_original",
+    "single_table",
+    "single_riscv_zksed",
+    "multibuffer_bitslice",
+    "multibuffer_original",
+    "multibuffer_table",
+    "decrypt_parallel_original",
+    "decrypt_parallel_table",
+    "multibuffer_simd",
+]
+
+VARIANT_NAMES = {
+    "single_original": "Original (Single)",
+    "single_table": "T-table (Single)",
+    "single_riscv_zksed": "Zksed (Single)",
+    "multibuffer_bitslice": "Bitslice (32-way)",
+    "multibuffer_original": "Original (Multi-buffer)",
+    "multibuffer_table": "T-table (Multi-buffer)",
+    "decrypt_parallel_original": "Decrypt Original (Parallel)",
+    "decrypt_parallel_table": "Decrypt T-table (Parallel)",
+    "multibuffer_simd": "SIMD (x86 only)",
 }
 
 PLATFORM_NAMES = {
-    'wsl-arch': 'WSL-Arch (x86_64)',
-    'qemu-riscv': 'QEMU RISC-V (rv64)',
+    "qemu-riscv": "QEMU RISC-V (rv64)",
+    "wsl-arch": "WSL-Arch (x86_64)",
 }
 
-VARIANT_NAMES = {
-    'single_original': 'Original (Single)',
-    'single_table': 'Table (Single)',
-    'multibuffer_original': 'Original (Multi-buf)',
-    'multibuffer_table': 'Table (Multi-buf)',
-    'decrypt_parallel_original': 'Decrypt Original (Parallel)',
-    'decrypt_parallel_table': 'Decrypt Table (Parallel)',
+VARIANT_COLORS = {
+    "single_original": "#b83b5e",
+    "single_table": "#2a9d8f",
+    "single_riscv_zksed": "#e9c46a",
+    "multibuffer_bitslice": "#4c6e91",
+    "multibuffer_original": "#7b6d8d",
+    "multibuffer_table": "#a05a2c",
+    "decrypt_parallel_original": "#c06c84",
+    "decrypt_parallel_table": "#355c7d",
+    "multibuffer_simd": "#1f9d8a",
 }
 
-MODE_NAMES = {
-    'cbc_encrypt_single': 'CBC Encrypt (Single Stream)',
-    'cbc_encrypt_multi_buffer': 'CBC Encrypt (Multi-Buffer)',
-    'cbc_decrypt_parallel': 'CBC Decrypt (Parallel)',
+OPT_COLORS = {
+    "O0": "#6c757d",
+    "O1": "#457b9d",
+    "O2": "#2a9d8f",
+    "O3": "#e76f51",
+}
+
+THREAD_VARIANTS = {
+    "multibuffer_original",
+    "multibuffer_table",
+    "decrypt_parallel_original",
+    "decrypt_parallel_table",
+}
+
+SINGLE_STREAM_VARIANTS = {
+    "single_original",
+    "single_table",
+    "single_riscv_zksed",
 }
 
 
-# ----------------------
-# 4. Helper Functions
-# ----------------------
+sns.set_style("whitegrid")
+plt.rcParams.update({
+    "font.size": 11,
+    "font.family": "DejaVu Sans",
+    "axes.titlesize": 13,
+    "axes.labelsize": 12,
+    "xtick.labelsize": 10,
+    "ytick.labelsize": 10,
+    "legend.fontsize": 9,
+    "figure.dpi": 300,
+    "figure.figsize": (12, 7),
+    "axes.grid": True,
+    "grid.alpha": 0.25,
+    "grid.linestyle": "--",
+    "savefig.bbox": "tight",
+    "savefig.pad_inches": 0.12,
+})
+
+
 def sanitize_filename(name: str) -> str:
-    """Sanitize filename for cross-platform compatibility."""
-    return re.sub(r'[^\w\-_.]', '_', name)
+    return re.sub(r"[^\w\-_.]", "_", name)
 
 
-# ----------------------
-# 5. Data Loading & Preprocessing
-# ----------------------
-def load_and_preprocess_data(file_paths: list) -> pd.DataFrame:
-    """
-    Load and merge CSV files. Fixed: only drop rows with explicitly invalid verify
-    (e.g. 'fail'), NOT rows with NaN verify (multi-buffer encrypt data has no verify).
-    """
-    df_list = []
-    for file_path in file_paths:
-        if not os.path.exists(file_path):
-            print(f"Warning: File not found - {file_path}")
-            continue
-        df = pd.read_csv(file_path)
-        print(f"Loaded {file_path}: {len(df)} rows, {len(df.columns)} columns")
-
-        # Drop rows with missing core metrics
-        before = len(df)
-        df = df.dropna(subset=CORE_METRICS)
-        dropped = before - len(df)
-        if dropped > 0:
-            print(f"  Dropped {dropped} rows with missing core metrics")
-
-        # FIXED: only filter rows where verify is explicitly 'fail'
-        # NaN verify (multi-buffer encrypt) should be KEPT
-        if 'verify' in df.columns:
-            invalid_mask = (~df['verify'].isna()) & (df['verify'] != 'ok')
-            invalid_count = invalid_mask.sum()
-            if invalid_count > 0:
-                print(f"  Dropping {invalid_count} rows with verify != 'ok' (explicit failure)")
-                df = df[~invalid_mask]
-
-        df_list.append(df)
-
-    merged_df = pd.concat(df_list, ignore_index=True)
-
-    # Summary
-    print(f"\n{'='*60}")
-    print(f"Merged Dataset Summary")
-    print(f"{'='*60}")
-    print(f"Total valid test rows: {len(merged_df)}")
-    print(f"Platforms: {merged_df['target'].unique().tolist()}")
-    print(f"Variants: {merged_df['variant'].unique().tolist()}")
-    print(f"Modes: {merged_df['mode'].unique().tolist()}")
-    print(f"Thread counts: {sorted(merged_df['threads'].unique().tolist())}")
-    print(f"Optimization levels: {sorted(merged_df['opt'].unique().tolist())}")
-
-    return merged_df
-
-
-# ----------------------
-# 6. Statistical Summary
-# ----------------------
-def generate_statistics(df: pd.DataFrame) -> pd.DataFrame:
-    """Generate comprehensive statistical summary grouped by core dimensions."""
-    agg_dict = {metric: ['mean', 'std', 'min', 'max', 'count'] for metric in CORE_METRICS}
-    stats_df = df.groupby(GROUP_DIMENSIONS, dropna=False).agg(agg_dict).reset_index()
-    stats_df.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in stats_df.columns]
-    stats_df.to_csv(STATISTICS_OUTPUT_PATH, index=False)
-    print(f"\nStatistical summary saved to: {STATISTICS_OUTPUT_PATH}")
-    return stats_df
-
-
-# ----------------------
-# 7. Visualization Functions
-# ----------------------
-
-def _save_fig(filename: str):
-    """Helper to save figure and close."""
+def save_fig(filename: str):
     path = os.path.join(OUTPUT_DIR, filename)
-    plt.savefig(path, dpi=300, bbox_inches='tight')
+    plt.savefig(path, dpi=300, bbox_inches="tight")
     print(f"  Saved: {path}")
     plt.close()
 
 
-def plot_platform_comparison(df: pd.DataFrame):
-    """
-    Fig 1: Cross-platform throughput comparison (bar chart grouped by variant & opt).
-    Separate subplot per variant, bars grouped by optimization level.
-    """
-    for metric in ['throughput_MBps', 'time_s']:
-        opt_levels = sorted(df['opt'].unique())
-        x = np.arange(len(opt_levels))
-        width = 0.35
-        fig, ax = plt.subplots(figsize=(14, 8))
-
-        for pi, platform in enumerate(sorted(df['target'].unique())):
-            pdata = df[df['target'] == platform]
-            summary = pdata.groupby('opt')[metric].agg(['mean', 'std']).reindex(opt_levels)
-            ax.bar(
-                x + pi * width,
-                summary['mean'],
-                width,
-                yerr=summary['std'].fillna(0),
-                capsize=4,
-                label=PLATFORM_NAMES.get(platform, platform),
-                color='#1f77b4' if pi == 0 else '#ff7f0e',
-                alpha=0.85,
-                edgecolor='black',
-                linewidth=0.5,
-            )
-
-        ylabel = 'Throughput (MB/s)' if metric == 'throughput_MBps' else 'Execution Time (s)'
-        ax.set_xlabel('Compiler Optimization Level', fontweight='bold')
-        ax.set_ylabel(ylabel, fontweight='bold')
-        ax.set_title(f'Cross-Platform {ylabel} Comparison by Optimization Level', fontweight='bold')
-        ax.set_xticks(x + width / 2)
-        ax.set_xticklabels(opt_levels)
-        ax.legend(title='Platform', frameon=True, fancybox=True, shadow=True)
-        ax.grid(axis='y', alpha=0.3, linestyle='--')
-
-        _save_fig(f'bar_platform_{metric}_by_opt.png')
+def display_variant_name(variant: str) -> str:
+    return VARIANT_NAMES.get(variant, variant)
 
 
-def plot_method_comparison_per_platform(df: pd.DataFrame):
-    """
-    Fig 2: Cross-method comparison per platform, bar chart grouped by threads.
-    One figure per platform, variants as bar groups.
-    """
-    for platform in sorted(df['target'].unique()):
-        pdata = df[df['target'] == platform].copy()
-
-        for opt in sorted(df['opt'].unique()):
-            opt_data = pdata[pdata['opt'] == opt]
-            if len(opt_data) == 0:
-                continue
-
-            threads = sorted(opt_data['threads'].unique())
-            variants = [v for v in sorted(opt_data['variant'].unique())]
-
-            x = np.arange(len(variants))
-            width = 0.2
-            fig, ax = plt.subplots(figsize=(14, 8))
-
-            for ti, t in enumerate(threads):
-                tdata = opt_data[opt_data['threads'] == t]
-                values = []
-                errors = []
-                for v in variants:
-                    vdata = tdata[tdata['variant'] == v]
-                    if len(vdata) > 0:
-                        values.append(vdata['throughput_MBps'].mean())
-                        errors.append(vdata['throughput_MBps'].std() if len(vdata) > 1 else 0)
-                    else:
-                        values.append(0)
-                        errors.append(0)
-                ax.bar(
-                    x + ti * width,
-                    values,
-                    width,
-                    yerr=errors,
-                    capsize=3,
-                    label=f'{t} Thread{"s" if t > 1 else ""}',
-                    alpha=0.85,
-                    edgecolor='black',
-                    linewidth=0.4,
-                )
-
-            ax.set_xlabel('Method Variant', fontweight='bold')
-            ax.set_ylabel('Throughput (MB/s)', fontweight='bold')
-            ax.set_title(
-                f'Method Comparison – {PLATFORM_NAMES.get(platform, platform)}  ({opt})',
-                fontweight='bold',
-            )
-            ax.set_xticks(x + width * (len(threads) - 1) / 2)
-            ax.set_xticklabels([VARIANT_NAMES.get(v, v) for v in variants],
-                               rotation=25, ha='right')
-            ax.legend(title='Threads', frameon=True, fancybox=True, shadow=True)
-            ax.grid(axis='y', alpha=0.3, linestyle='--')
-
-            _save_fig(f'bar_method_{platform}_{opt}_by_threads.png')
+def ordered_variants(values) -> list:
+    values = list(values)
+    known = [variant for variant in VARIANT_ORDER if variant in values]
+    unknown = sorted([variant for variant in values if variant not in VARIANT_ORDER])
+    return known + unknown
 
 
-def plot_encrypt_vs_decrypt(df: pd.DataFrame):
-    """
-    Fig 3: Encryption vs Decryption throughput line plot across threads.
-    Compare encrypt (multi-buffer / single) vs decrypt parallel.
-    """
-    for opt in sorted(df['opt'].unique()):
-        fig, ax = plt.subplots(figsize=(12, 7))
-        for platform, marker, ls in zip(
-            sorted(df['target'].unique()),
-            ['o', 's'],
-            ['-', '--'],
-        ):
-            pdata = df[(df['target'] == platform) & (df['opt'] == opt)]
+def load_and_preprocess_data(file_names: list) -> pd.DataFrame:
+    df_list = []
 
-            for variant, label, lw, alpha_v in [
-                ('multibuffer_table', 'Encrypt (Table Multi-Buf)', 2.5, 1.0),
-                ('decrypt_parallel_table', 'Decrypt (Table Parallel)', 2.5, 1.0),
-                ('multibuffer_original', 'Encrypt (Original Multi-Buf)', 1.5, 0.6),
-                ('decrypt_parallel_original', 'Decrypt (Original Parallel)', 1.5, 0.6),
-            ]:
-                vdata = pdata[pdata['variant'] == variant].groupby('threads')['throughput_MBps']
-                if vdata.count().sum() == 0:
-                    continue
-                summary = vdata.agg(['mean']).reset_index().sort_values('threads')
-                ax.plot(
-                    summary['threads'], summary['mean'],
-                    marker=marker, linestyle=ls, linewidth=lw,
-                    markersize=8, alpha=alpha_v,
-                    label=f'{PLATFORM_NAMES.get(platform, platform)} – {label}',
-                )
-
-        ax.set_xlabel('Number of Threads', fontweight='bold')
-        ax.set_ylabel('Throughput (MB/s)', fontweight='bold')
-        ax.set_title(f'Encryption vs. Decryption Throughput Comparison ({opt})',
-                     fontweight='bold')
-        ax.set_xticks(sorted(df['threads'].unique()))
-        ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left',
-                  frameon=True, fancybox=True, shadow=True, fontsize=8)
-        ax.grid(alpha=0.3, linestyle='--')
-
-        _save_fig(f'line_encrypt_vs_decrypt_{opt}.png')
-
-
-def plot_speedup_ratio(df: pd.DataFrame):
-    """
-    Fig 4: Speedup ratio (throughput / single-thread throughput) vs thread count.
-    """
-    for platform in sorted(df['target'].unique()):
-        pdata = df[df['target'] == platform].copy()
-
-        for opt in sorted(df['opt'].unique()):
-            opt_data = pdata[pdata['opt'] == opt]
-            if len(opt_data) == 0:
-                continue
-
-            fig, ax = plt.subplots(figsize=(12, 7))
-            all_variants = sorted(opt_data['variant'].unique())
-
-            for variant in all_variants:
-                vdata = opt_data[opt_data['variant'] == variant].sort_values('threads')
-                if len(vdata[vdata['threads'] == 1]) == 0:
-                    continue
-                baseline = vdata[vdata['threads'] == 1]['throughput_MBps'].mean()
-                if baseline == 0:
-                    continue
-                speedup = vdata.groupby('threads')['throughput_MBps'].mean() / baseline
-                ax.plot(
-                    speedup.index, speedup.values,
-                    marker='D', linestyle='-', linewidth=2, markersize=8,
-                    label=VARIANT_NAMES.get(variant, variant),
-                )
-
-            ax.set_xlabel('Number of Threads', fontweight='bold')
-            ax.set_ylabel('Speedup Ratio (×)', fontweight='bold')
-            ax.set_title(
-                f'Speedup Ratio – {PLATFORM_NAMES.get(platform, platform)}  ({opt})',
-                fontweight='bold',
-            )
-            ax.axhline(y=1.0, color='gray', linestyle=':', alpha=0.7, label='Baseline (1×)')
-            ax.set_xticks(sorted(opt_data['threads'].unique()))
-            ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left',
-                      frameon=True, fancybox=True, shadow=True, fontsize=8)
-            ax.grid(alpha=0.3, linestyle='--')
-
-            _save_fig(f'line_speedup_{platform}_{opt}.png')
-
-
-def plot_optimization_impact(df: pd.DataFrame):
-    """
-    Fig 5: Optimization-level impact heatmap-style bar chart.
-    For each variant at threads=1, show how O0→O3 changes throughput.
-    """
-    threads1 = df[df['threads'] == 1]
-
-    for platform in sorted(df['target'].unique()):
-        pdata = threads1[threads1['target'] == platform]
-
-        fig, ax = plt.subplots(figsize=(12, 6))
-        variants_sorted = sorted(pdata['variant'].unique())
-        opts = sorted(pdata['opt'].unique())
-
-        x = np.arange(len(variants_sorted))
-        n_opts = len(opts)
-        width = 0.8 / n_opts
-
-        for oi, opt in enumerate(opts):
-            values = []
-            for v in variants_sorted:
-                vrow = pdata[(pdata['variant'] == v) & (pdata['opt'] == opt)]
-                values.append(vrow['throughput_MBps'].mean() if len(vrow) > 0 else 0)
-            ax.bar(
-                x + oi * width - 0.4 + width / 2,
-                values, width,
-                label=opt, alpha=0.85, edgecolor='black', linewidth=0.4,
-            )
-
-        ax.set_xlabel('Method Variant', fontweight='bold')
-        ax.set_ylabel('Throughput (MB/s)', fontweight='bold')
-        ax.set_title(
-            f'Compiler Optimization Impact (Threads=1) – '
-            f'{PLATFORM_NAMES.get(platform, platform)}',
-            fontweight='bold',
-        )
-        ax.set_xticks(x)
-        ax.set_xticklabels([VARIANT_NAMES.get(v, v) for v in variants_sorted],
-                           rotation=25, ha='right')
-        ax.legend(title='Opt Level', frameon=True, fancybox=True, shadow=True)
-        ax.grid(axis='y', alpha=0.3, linestyle='--')
-
-        _save_fig(f'bar_opt_impact_{platform}_t1.png')
-
-
-def plot_throughput_vs_threads_overview(df: pd.DataFrame):
-    """
-    Fig 6: Comprehensive throughput vs threads line plot — all variants, both platforms,
-    both optimization levels in a single figure with subplots.
-    """
-    opts = sorted(df['opt'].unique())
-    colors_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
-                   '#9467bd', '#8c564b', '#e377c2', '#17becf']
-
-    fig, axes = plt.subplots(2, 2, figsize=(18, 13))
-    axes = axes.flatten()
-
-    for oi, opt in enumerate(opts[:4]):
-        ax = axes[oi]
-        opt_data = df[df['opt'] == opt]
-
-        for vi, variant in enumerate(sorted(opt_data['variant'].unique())):
-            for pi, platform in enumerate(sorted(opt_data['target'].unique())):
-                vpdata = opt_data[(opt_data['variant'] == variant) &
-                                  (opt_data['target'] == platform)]
-                if vpdata.empty:
-                    continue
-                summary = vpdata.groupby('threads')['throughput_MBps'].mean().sort_index()
-                style = '-' if pi == 0 else '--'
-                ax.plot(
-                    summary.index, summary.values,
-                    marker='o' if pi == 0 else 's',
-                    linestyle=style,
-                    linewidth=1.8,
-                    markersize=5,
-                    color=colors_list[vi % len(colors_list)],
-                    alpha=0.9,
-                    label=f'{VARIANT_NAMES.get(variant, variant)} [{PLATFORM_NAMES.get(platform, platform)}]',
-                )
-
-        ax.set_xlabel('Number of Threads', fontweight='bold')
-        ax.set_ylabel('Throughput (MB/s)', fontweight='bold')
-        ax.set_title(f'({opt})', fontweight='bold', fontsize=11)
-        ax.set_xticks(sorted(opt_data['threads'].unique()))
-        ax.legend(fontsize=6, loc='upper left', framealpha=0.8)
-        ax.grid(alpha=0.3, linestyle='--')
-
-    fig.suptitle('SM4-CBC Throughput vs. Threads — Full Comparison',
-                 fontweight='bold', fontsize=15, y=1.01)
-    plt.tight_layout()
-    _save_fig('line_throughput_vs_threads_full.png')
-
-
-# ----------------------
-# 8. LaTeX Table Generation
-# ----------------------
-def generate_latex_table(df: pd.DataFrame):
-    """Generate a comprehensive LaTeX table of all results."""
-    table_path = os.path.join(OUTPUT_DIR, '..', 'content', 'result.tex')
-
-    # Aggregate by key dimensions
-    pivot = df.groupby(['target', 'opt', 'variant', 'threads'])['throughput_MBps'].mean()
-
-    lines = []
-    lines.append(r'\section{实验数据汇总表}')
-    lines.append(r'% Auto-generated LaTeX table from experimental data')
-    lines.append(r'\begin{longtable}{llllr}')
-    lines.append(r'\caption{SM4-CBC 加密性能完整数据汇总（吞吐量 MB/s）}\\')
-    lines.append(r'\hline')
-    lines.append(r'\textbf{Platform} & \textbf{Opt} & \textbf{Variant} & \textbf{Threads} & \textbf{Throughput (MB/s)} \\')
-    lines.append(r'\hline')
-    lines.append(r'\endfirsthead')
-    lines.append(r'\hline')
-    lines.append(r'\textbf{Platform} & \textbf{Opt} & \textbf{Variant} & \textbf{Threads} & \textbf{Throughput (MB/s)} \\')
-    lines.append(r'\hline')
-    lines.append(r'\endhead')
-
-    for (target, opt, variant, threads), val in pivot.items():
-        if pd.isna(val):
+    for file_name in file_names:
+        file_path = os.path.join(OUTPUT_DIR, file_name)
+        if not os.path.exists(file_path):
+            print(f"Warning: file not found - {file_path}")
             continue
-        platform_label = PLATFORM_NAMES.get(target, target)
-        variant_label = VARIANT_NAMES.get(variant, variant)
-        lines.append(
-            f'{platform_label} & {opt} & {variant_label} & {threads} & {val:.2f} \\\\'
+
+        df = pd.read_csv(file_path)
+        df["source_file"] = file_name
+        print(f"Loaded {file_name}: {len(df)} rows")
+        df_list.append(df)
+
+    if not df_list:
+        raise FileNotFoundError("No input CSV files were found in the data directory.")
+
+    df = pd.concat(df_list, ignore_index=True)
+
+    for col in CORE_NUMERIC_COLUMNS:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    if "verify" in df.columns:
+        invalid_mask = (~df["verify"].isna()) & (df["verify"] != "ok")
+        invalid_count = int(invalid_mask.sum())
+        if invalid_count > 0:
+            print(f"Dropping {invalid_count} rows with explicit verify failure")
+            df = df.loc[~invalid_mask].copy()
+
+    required_cols = ["target", "variant", "opt", "time_s", "data_bytes"]
+    df = df.dropna(subset=required_cols).copy()
+
+    if "throughput_MBps" not in df.columns or df["throughput_MBps"].isna().all():
+        df["throughput_MBps"] = df["data_bytes"] / df["time_s"] / 1_000_000.0
+
+    if "throughput_MiBps" not in df.columns or df["throughput_MiBps"].isna().all():
+        df["throughput_MiBps"] = df["data_bytes"] / df["time_s"] / 1024.0 / 1024.0
+
+    df["threads"] = df["threads"].fillna(1).astype(int)
+    df["time_per_mib"] = df["time_s"] / (df["data_bytes"] / (1024.0 * 1024.0))
+    df["time_per_mb"] = df["time_s"] / (df["data_bytes"] / 1_000_000.0)
+    df["variant_label"] = df["variant"].map(VARIANT_NAMES).fillna(df["variant"])
+    df["platform_label"] = df["target"].map(PLATFORM_NAMES).fillna(df["target"])
+
+    print(f"\nLoaded valid rows: {len(df)}")
+    print(f"Platforms: {sorted(df['target'].dropna().unique().tolist())}")
+    print(f"Variants: {ordered_variants(df['variant'].dropna().unique().tolist())}")
+    print(f"Opts: {sorted(df['opt'].dropna().unique().tolist())}")
+
+    return df
+
+
+def save_statistics(df: pd.DataFrame):
+    summary = (
+        df.groupby(["target", "variant", "opt", "threads"], dropna=False)
+        .agg(
+            runs=("time_s", "count"),
+            mean_time_s=("time_s", "mean"),
+            mean_time_per_mib=("time_per_mib", "mean"),
+            mean_throughput_MBps=("throughput_MBps", "mean"),
+            mean_data_bytes=("data_bytes", "mean"),
+        )
+        .reset_index()
+    )
+    summary.to_csv(STATISTICS_OUTPUT_PATH, index=False)
+    print(f"Saved: {STATISTICS_OUTPUT_PATH}")
+
+    qemu = summary[summary["target"] == "qemu-riscv"].copy()
+    qemu.to_csv(QEMU_STATISTICS_OUTPUT_PATH, index=False)
+    print(f"Saved: {QEMU_STATISTICS_OUTPUT_PATH}")
+
+
+def plot_qemu_single_stream_time(df_qemu: pd.DataFrame):
+    subset = df_qemu[
+        (df_qemu["variant"].isin(SINGLE_STREAM_VARIANTS)) &
+        (df_qemu["threads"] == 1)
+    ].copy()
+    if subset.empty:
+        print("Skip: no qemu single-stream data")
+        return
+
+    opts = sorted(subset["opt"].unique())
+    variants = ordered_variants(subset["variant"].unique())
+    x = np.arange(len(opts))
+    width = 0.24 if len(variants) >= 3 else 0.32
+
+    fig, ax = plt.subplots(figsize=(12, 6.5))
+    for idx, variant in enumerate(variants):
+        vdata = subset[subset["variant"] == variant]
+        summary = vdata.groupby("opt")["time_per_mib"].mean().reindex(opts)
+        offset = (idx - (len(variants) - 1) / 2.0) * width
+        ax.bar(
+            x + offset,
+            summary.values,
+            width=width,
+            label=display_variant_name(variant),
+            color=VARIANT_COLORS.get(variant, "#888888"),
+            edgecolor="black",
+            linewidth=0.5,
         )
 
-    lines.append(r'\hline')
-    lines.append(r'\end{longtable}')
-    lines.append('')
-
-    # Ensure content directory exists
-    os.makedirs(os.path.dirname(table_path), exist_ok=True)
-    with open(table_path, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(lines))
-
-    print(f"\nLaTeX table saved to: {table_path}")
+    ax.set_xticks(x)
+    ax.set_xticklabels(opts)
+    ax.set_xlabel("Compiler Optimization Level", fontweight="bold")
+    ax.set_ylabel("Execution Time per MiB (s)", fontweight="bold")
+    ax.set_title("QEMU RISC-V Single-Stream Time Cost by Optimization Level", fontweight="bold")
+    ax.legend(frameon=True)
+    save_fig("qemu_single_time_per_mib_by_opt.png")
 
 
-# ----------------------
-# 9. Main Execution
-# ----------------------
+def plot_qemu_instruction_optimization(df_qemu: pd.DataFrame):
+    subset = df_qemu[
+        (df_qemu["variant"].isin(SINGLE_STREAM_VARIANTS)) &
+        (df_qemu["threads"] == 1)
+    ].copy()
+    if subset.empty:
+        print("Skip: no qemu instruction-optimization data")
+        return
+
+    fig, ax = plt.subplots(figsize=(11.5, 6.5))
+    for variant in ordered_variants(subset["variant"].unique()):
+        summary = (
+            subset[subset["variant"] == variant]
+            .groupby("opt")["time_per_mib"]
+            .mean()
+            .reindex(sorted(subset["opt"].unique()))
+        )
+        ax.plot(
+            summary.index,
+            summary.values,
+            marker="o",
+            linewidth=2.3,
+            markersize=7,
+            label=display_variant_name(variant),
+            color=VARIANT_COLORS.get(variant, "#888888"),
+        )
+
+    ax.set_xlabel("Compiler Optimization Level", fontweight="bold")
+    ax.set_ylabel("Execution Time per MiB (s)", fontweight="bold")
+    ax.set_title("QEMU RISC-V Instruction-Oriented Optimization Comparison", fontweight="bold")
+    ax.legend(frameon=True)
+    save_fig("qemu_instruction_optimization_line.png")
+
+
+def plot_qemu_thread_scaling(df_qemu: pd.DataFrame):
+    subset = df_qemu[
+        (df_qemu["variant"].isin(THREAD_VARIANTS)) &
+        (df_qemu["opt"] == "O3")
+    ].copy()
+    if subset.empty:
+        print("Skip: no qemu thread-scaling data")
+        return
+
+    fig, ax = plt.subplots(figsize=(12, 7))
+    for variant in ordered_variants(subset["variant"].unique()):
+        summary = (
+            subset[subset["variant"] == variant]
+            .groupby("threads")["time_per_mib"]
+            .mean()
+            .sort_index()
+        )
+        ax.plot(
+            summary.index,
+            summary.values,
+            marker="o",
+            linewidth=2.2,
+            markersize=7,
+            label=display_variant_name(variant),
+            color=VARIANT_COLORS.get(variant, "#888888"),
+        )
+
+    ax.set_xlabel("Threads", fontweight="bold")
+    ax.set_ylabel("Execution Time per MiB (s)", fontweight="bold")
+    ax.set_title("QEMU RISC-V O3 Thread Scaling by Implementation", fontweight="bold")
+    ax.set_xticks(sorted(subset["threads"].unique()))
+    ax.legend(frameon=True)
+    save_fig("qemu_thread_scaling_time_per_mib_o3.png")
+
+
+def plot_qemu_best_variant_summary(df_qemu: pd.DataFrame):
+    if df_qemu.empty:
+        print("Skip: no qemu data for best-variant summary")
+        return
+
+    grouped = (
+        df_qemu.groupby(["variant", "opt", "threads"], dropna=False)
+        .agg(
+            mean_time_per_mib=("time_per_mib", "mean"),
+            mean_throughput_MBps=("throughput_MBps", "mean"),
+        )
+        .reset_index()
+    )
+
+    best_rows = (
+        grouped.sort_values(["variant", "mean_time_per_mib"])
+        .groupby("variant", as_index=False)
+        .first()
+    )
+    if best_rows.empty:
+        print("Skip: no qemu best rows")
+        return
+
+    best_rows = best_rows.sort_values("mean_time_per_mib", ascending=True)
+
+    fig, ax = plt.subplots(figsize=(12.5, 7))
+    bars = ax.bar(
+        np.arange(len(best_rows)),
+        best_rows["mean_time_per_mib"],
+        color=[VARIANT_COLORS.get(v, "#888888") for v in best_rows["variant"]],
+        edgecolor="black",
+        linewidth=0.5,
+    )
+
+    ax.set_xticks(np.arange(len(best_rows)))
+    ax.set_xticklabels(
+        [display_variant_name(v) for v in best_rows["variant"]],
+        rotation=22,
+        ha="right",
+    )
+    ax.set_ylabel("Best Execution Time per MiB (s)", fontweight="bold")
+    ax.set_title("QEMU RISC-V Best Time Cost Reached by Each Variant", fontweight="bold")
+
+    for bar, (_, row) in zip(bars, best_rows.iterrows()):
+        ax.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            bar.get_height(),
+            f"{row['opt']}, t={int(row['threads'])}",
+            ha="center",
+            va="bottom",
+            fontsize=8,
+            rotation=0,
+        )
+
+    save_fig("qemu_best_time_per_mib_by_variant.png")
+
+
+def plot_qemu_opt_heatmap(df_qemu: pd.DataFrame):
+    if df_qemu.empty:
+        print("Skip: no qemu data for optimization heatmap")
+        return
+
+    pivot = (
+        df_qemu.groupby(["variant", "opt"], dropna=False)["time_per_mib"]
+        .min()
+        .unstack("opt")
+    )
+    if pivot.empty:
+        print("Skip: qemu optimization heatmap pivot is empty")
+        return
+
+    pivot = pivot.reindex(ordered_variants(pivot.index), axis=0)
+    pivot = pivot.reindex(sorted(pivot.columns), axis=1)
+
+    fig, ax = plt.subplots(figsize=(10.5, 6.5))
+    sns.heatmap(
+        pivot,
+        annot=True,
+        fmt=".3f",
+        cmap="YlOrRd_r",
+        linewidths=0.5,
+        cbar_kws={"label": "Min Time per MiB (s)"},
+        ax=ax,
+    )
+    ax.set_yticklabels([display_variant_name(v) for v in pivot.index], rotation=0)
+    ax.set_xlabel("Compiler Optimization Level", fontweight="bold")
+    ax.set_ylabel("Variant", fontweight="bold")
+    ax.set_title("QEMU RISC-V Minimum Time per MiB Heatmap", fontweight="bold")
+    save_fig("qemu_opt_heatmap_time_per_mib.png")
+
+
+def plot_wsl_simd_supplement(df: pd.DataFrame):
+    subset = df[
+        (df["target"] == "wsl-arch") &
+        (df["variant"].isin(["single_original", "single_table", "multibuffer_simd"])) &
+        (df["opt"].isin(["O0", "O1", "O2", "O3"]))
+    ].copy()
+    if subset.empty or "multibuffer_simd" not in subset["variant"].unique():
+        print("Skip: no SIMD supplemental data")
+        return
+
+    grouped = (
+        subset.groupby(["variant", "opt"], dropna=False)["time_per_mib"]
+        .mean()
+        .reset_index()
+    )
+    fig, ax = plt.subplots(figsize=(11.5, 6.5))
+    for variant in ordered_variants(grouped["variant"].unique()):
+        summary = (
+            grouped[grouped["variant"] == variant]
+            .set_index("opt")["time_per_mib"]
+            .reindex(["O0", "O1", "O2", "O3"])
+        )
+        ax.plot(
+            summary.index,
+            summary.values,
+            marker="o",
+            linewidth=2.2,
+            markersize=7,
+            label=display_variant_name(variant),
+            color=VARIANT_COLORS.get(variant, "#888888"),
+        )
+
+    ax.set_xlabel("Compiler Optimization Level", fontweight="bold")
+    ax.set_ylabel("Execution Time per MiB (s)", fontweight="bold")
+    ax.set_title("WSL Supplemental: x86 SIMD Optimization Trend", fontweight="bold")
+    ax.legend(frameon=True)
+    save_fig("wsl_simd_supplement_time_per_mib.png")
+
+
+def generate_qemu_summary_tex(df_qemu: pd.DataFrame):
+    grouped = (
+        df_qemu.groupby(["variant", "opt", "threads"], dropna=False)
+        .agg(
+            time_per_mib=("time_per_mib", "mean"),
+            throughput_MBps=("throughput_MBps", "mean"),
+        )
+        .reset_index()
+        .sort_values(["variant", "opt", "threads"])
+    )
+
+    lines = [
+        r"\section{QEMU RISC-V实验结果汇总}",
+        r"% Auto-generated by data/analyze.py",
+        r"\begin{longtable}{llrrr}",
+        r"\caption{QEMU RISC-V平台SM4-CBC性能汇总（按实现、优化级别与线程数）}\\",
+        r"\hline",
+        r"\textbf{Variant} & \textbf{Opt} & \textbf{Threads} & \textbf{Time/MiB (s)} & \textbf{Throughput (MB/s)} \\",
+        r"\hline",
+        r"\endfirsthead",
+        r"\hline",
+        r"\textbf{Variant} & \textbf{Opt} & \textbf{Threads} & \textbf{Time/MiB (s)} & \textbf{Throughput (MB/s)} \\",
+        r"\hline",
+        r"\endhead",
+    ]
+
+    for _, row in grouped.iterrows():
+        lines.append(
+            f"{display_variant_name(row['variant'])} & {row['opt']} & "
+            f"{int(row['threads'])} & {row['time_per_mib']:.4f} & {row['throughput_MBps']:.2f} \\\\"
+        )
+
+    lines.extend([r"\hline", r"\end{longtable}", ""])
+    os.makedirs(os.path.dirname(QEMU_SUMMARY_TEX_PATH), exist_ok=True)
+    with open(QEMU_SUMMARY_TEX_PATH, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+    print(f"Saved: {QEMU_SUMMARY_TEX_PATH}")
+
+
+def main():
+    print("=" * 68)
+    print("  SM4-CBC RISC-V Focused Analysis & Visualization Tool")
+    print("=" * 68)
+
+    merged = load_and_preprocess_data(DATA_FILES)
+    save_statistics(merged)
+
+    qemu = merged[merged["target"] == "qemu-riscv"].copy()
+    print(f"\nQEMU RISC-V rows: {len(qemu)}")
+
+    print(f"\n--- Generating QEMU-focused figures in {OUTPUT_DIR} ---")
+    plot_qemu_single_stream_time(qemu)
+    plot_qemu_instruction_optimization(qemu)
+    plot_qemu_thread_scaling(qemu)
+    plot_qemu_best_variant_summary(qemu)
+    plot_qemu_opt_heatmap(qemu)
+    plot_wsl_simd_supplement(merged)
+
+    print("\n--- Generating QEMU summary table ---")
+    generate_qemu_summary_tex(qemu)
+
+    print("\nAnalysis complete.")
+
+
 if __name__ == "__main__":
-    print("=" * 65)
-    print("  SM4-CBC Performance Analysis & Visualization Tool")
-    print("=" * 65)
-
-    # Step 1: Load and preprocess
-    merged_data = load_and_preprocess_data(DATA_FILES)
-
-    # Step 2: Statistical summary
-    generate_statistics(merged_data)
-
-    # Step 3: Generate all comparison charts
-    print(f"\n--- Generating Charts (saved to {OUTPUT_DIR}) ---")
-
-    print("[1/6] Cross-platform comparison by optimization level...")
-    plot_platform_comparison(merged_data)
-
-    print("[2/6] Cross-method comparison per platform & optimization level...")
-    plot_method_comparison_per_platform(merged_data)
-
-    print("[3/6] Encryption vs Decryption line plots...")
-    plot_encrypt_vs_decrypt(merged_data)
-
-    print("[4/6] Speedup ratio analysis...")
-    plot_speedup_ratio(merged_data)
-
-    print("[5/6] Optimization impact bar charts (threads=1)...")
-    plot_optimization_impact(merged_data)
-
-    print("[6/6] Comprehensive throughput vs threads overview...")
-    plot_throughput_vs_threads_overview(merged_data)
-
-    # Step 4: Generate LaTeX table
-    print("\n--- Generating LaTeX Table ---")
-    generate_latex_table(merged_data)
-
-    print("\n" + "=" * 65)
-    print("  Analysis & Visualization Complete!")
-    print(f"  All outputs in: {OUTPUT_DIR}")
-    print("=" * 65)
+    main()

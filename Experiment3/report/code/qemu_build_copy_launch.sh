@@ -18,42 +18,105 @@ KERNEL="${KERNEL:-linux/arch/riscv/boot/Image}"
 
 CROSS_CC="${CROSS_CC:-riscv64-unknown-linux-gnu-gcc}"
 QEMU="${QEMU:-qemu-system-riscv64}"
+RVV_CFLAGS="${RVV_CFLAGS:--march=rv64gcv -mabi=lp64d}"
+QEMU_CPU="${QEMU_CPU:-rv64,v=true,vlen=256,elen=64}"
 
 # --- Benchmark matrix ---
 OPT_LEVELS="${OPT_LEVELS:-O0 O1 O2 O3}"
 THREAD_COUNTS="${THREAD_COUNTS:-1 2 4 8}"
 DATA_LEN="${DATA_LEN:-1048576}"
 LOOP="${LOOP:-20}"
+BITSLICE_DATA_LEN="${BITSLICE_DATA_LEN:-32768}"
+BITSLICE_LOOP="${BITSLICE_LOOP:-2}"
 QEMU_MEM="${QEMU_MEM:-256M}"
 
 GUEST_RUNNER_SRC="${GUEST_RUNNER_SRC:-$SCRIPT_DIR/qemu_run_sm4_bench.sh}"
 GUEST_RUNNER_NAME="${GUEST_RUNNER_NAME:-qemu_run_sm4_bench.sh}"
 
-echo "==== Step 0: Checking paths ===="
-if [ ! -d "$SRC_DIR" ]; then
+resolve_dir_path() {
+    local path="$1"
+
+    if [ -d "$path" ]; then
+        (cd "$path" && pwd)
+        return 0
+    fi
+
+    if [ "${path#/}" != "$path" ] || [[ "$path" =~ ^[A-Za-z]:[\\/] ]]; then
+        return 1
+    fi
+
+    if [ -d "$SCRIPT_DIR/$path" ]; then
+        (cd "$SCRIPT_DIR/$path" && pwd)
+        return 0
+    fi
+
+    return 1
+}
+
+resolve_file_path() {
+    local path="$1"
+    shift
+
+    if [ -f "$path" ]; then
+        printf '%s\n' "$path"
+        return 0
+    fi
+
+    if [ "${path#/}" != "$path" ] || [[ "$path" =~ ^[A-Za-z]:[\\/] ]]; then
+        return 1
+    fi
+
+    for base in "$@"; do
+        if [ -n "$base" ] && [ -f "$base/$path" ]; then
+            printf '%s\n' "$base/$path"
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+if ! SRC_DIR="$(resolve_dir_path "$SRC_DIR")"; then
     echo "error: source directory does not exist: $SRC_DIR"
     exit 1
 fi
 
-if [ ! -f "$IMG_FILE" ]; then
+SRC_PARENT_DIR="$(cd "$SRC_DIR/.." && pwd)"
+BUILD_DIR="${BUILD_DIR/#\~/$HOME}"
+if [[ "$BUILD_DIR" != /* ]]; then
+    BUILD_DIR="$SRC_DIR/${BUILD_DIR#./}"
+fi
+IMG_FILE="${IMG_FILE/#\~/$HOME}"
+BIOS="${BIOS/#\~/$HOME}"
+KERNEL="${KERNEL/#\~/$HOME}"
+GUEST_RUNNER_SRC="${GUEST_RUNNER_SRC/#\~/$HOME}"
+
+if ! IMG_FILE="$(resolve_file_path "$IMG_FILE" "$PWD" "$SRC_PARENT_DIR" "$SRC_DIR" "$SCRIPT_DIR")"; then
     echo "error: rootfs image does not exist: $IMG_FILE"
     exit 1
 fi
 
-if [ ! -f "$BIOS" ]; then
+if ! BIOS="$(resolve_file_path "$BIOS" "$PWD" "$SRC_PARENT_DIR" "$SRC_DIR" "$SCRIPT_DIR")"; then
     echo "error: OpenSBI firmware does not exist: $BIOS"
     exit 1
 fi
 
-if [ ! -f "$KERNEL" ]; then
+if ! KERNEL="$(resolve_file_path "$KERNEL" "$PWD" "$SRC_PARENT_DIR" "$SRC_DIR" "$SCRIPT_DIR")"; then
     echo "error: Linux kernel image does not exist: $KERNEL"
     exit 1
 fi
 
-if [ ! -f "$GUEST_RUNNER_SRC" ]; then
+if ! GUEST_RUNNER_SRC="$(resolve_file_path "$GUEST_RUNNER_SRC" "$PWD" "$SRC_DIR" "$SCRIPT_DIR")"; then
     echo "error: guest runner does not exist: $GUEST_RUNNER_SRC"
     exit 1
 fi
+
+echo "==== Step 0: Checking paths ===="
+echo "source dir : $SRC_DIR"
+echo "rootfs img : $IMG_FILE"
+echo "OpenSBI    : $BIOS"
+echo "kernel     : $KERNEL"
+echo "runner     : $GUEST_RUNNER_SRC"
 
 mkdir -p "$BUILD_DIR"
 
@@ -62,8 +125,11 @@ echo "source dir : $SRC_DIR"
 echo "build dir  : $BUILD_DIR"
 echo "data len   : $DATA_LEN bytes"
 echo "loop       : $LOOP"
+echo "bitslice   : $BITSLICE_DATA_LEN bytes, loop $BITSLICE_LOOP"
 echo "opts       : $OPT_LEVELS"
 echo "threads    : $THREAD_COUNTS"
+echo "rvv cflags : $RVV_CFLAGS"
+echo "qemu cpu   : $QEMU_CPU"
 
 EXE_FILES=()
 
@@ -75,6 +141,7 @@ compile_one() {
     local threads="$5"
     local threaded="$6"
     local need_pthread="$7"
+    local extra_cflags="${8:-}"
 
     local src_file="$SRC_DIR/$source"
     local exe_name="${variant}_${opt}"
@@ -109,6 +176,12 @@ compile_one() {
         cmd+=(-pthread)
     fi
 
+    if [ -n "$extra_cflags" ]; then
+        # shellcheck disable=SC2206
+        local extra=($extra_cflags)
+        cmd+=("${extra[@]}")
+    fi
+
     cmd+=("$src_file" -o "$exe_file")
 
     echo "compiling [$mode]: $exe_name"
@@ -120,6 +193,14 @@ compile_one() {
 for opt in $OPT_LEVELS; do
     compile_one "single_original" "sm4_single_stream_original.c" "cbc_encrypt_single" "$opt" "1" "no" "no"
     compile_one "single_table" "sm4_single_stream_table.c" "cbc_encrypt_single" "$opt" "1" "no" "no"
+    compile_one "single_riscv_zksed" "sm4_single_stream_riscv_zksed.c" "cbc_encrypt_single" "$opt" "1" "no" "no"
+    DATA_LEN_SAVE="$DATA_LEN"
+    LOOP_SAVE="$LOOP"
+    DATA_LEN="$BITSLICE_DATA_LEN"
+    LOOP="$BITSLICE_LOOP"
+    compile_one "multibuffer_bitslice" "sm4_multibuffer_bitslice_rv64.c" "cbc_encrypt_multi_buffer" "$opt" "1" "no" "no" "$RVV_CFLAGS"
+    DATA_LEN="$DATA_LEN_SAVE"
+    LOOP="$LOOP_SAVE"
 
     for threads in $THREAD_COUNTS; do
         compile_one "multibuffer_original" "sm4_multibuffer_pthread.c" "cbc_encrypt_multi_buffer" "$opt" "$threads" "yes" "yes"
@@ -162,6 +243,7 @@ echo "Exit QEMU with Ctrl+A then X."
 sleep 1
 
 "$QEMU" -M virt -m "$QEMU_MEM" -nographic \
+    -cpu "$QEMU_CPU" \
     -bios "$BIOS" \
     -kernel "$KERNEL" \
     -drive file="$IMG_FILE",format=raw,id=hd0 \

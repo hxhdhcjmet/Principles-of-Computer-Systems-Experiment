@@ -18,6 +18,21 @@ typedef struct {
     uint32_t rk[SM4_KEY_SCHEDULE];
 } SM4_KEY;
 
+static const uint32_t SM4_FK[4] = {
+    0xa3b1bac6, 0x56aa3350, 0x677d9197, 0xb27022dc
+};
+
+static const uint32_t SM4_CK[32] = {
+    0x00070E15, 0x1C232A31, 0x383F464D, 0x545B6269,
+    0x70777E85, 0x8C939AA1, 0xA8AFB6BD, 0xC4CBD2D9,
+    0xE0E7EEF5, 0xFC030A11, 0x181F262D, 0x343B4249,
+    0x50575E65, 0x6C737A81, 0x888F969D, 0xA4ABB2B9,
+    0xC0C7CED5, 0xDCE3EAF1, 0xF8FF060D, 0x141B2229,
+    0x30373E45, 0x4C535A61, 0x686F767D, 0x848B9299,
+    0xA0A7AEB5, 0xBCC3CAD1, 0xD8DFE6ED, 0xF4FB0209,
+    0x10171E25, 0x2C333A41, 0x484F565D, 0x646B7279
+};
+
 static const uint8_t SM4_S[256] = {
     0xD6, 0x90, 0xE9, 0xFE, 0xCC, 0xE1, 0x3D, 0xB7, 0x16, 0xB6, 0x14, 0xC2,
     0x28, 0xFB, 0x2C, 0x05, 0x2B, 0x67, 0x9A, 0x76, 0x2A, 0xBE, 0x04, 0xC3,
@@ -80,6 +95,11 @@ static inline uint32_t sm4_sbox_word(uint32_t x)
            ((uint32_t)SM4_S[(uint8_t)x]);
 }
 
+static inline uint8_t sm4_sbox_byte(uint8_t x)
+{
+    return SM4_S[x];
+}
+
 static inline uint32_t sm4_linear(uint32_t x)
 {
     return x ^ sm4_rotl(x, 2) ^ sm4_rotl(x, 10) ^ sm4_rotl(x, 18) ^ sm4_rotl(x, 24);
@@ -129,36 +149,21 @@ static inline uint32_t sm4_key_sub(uint32_t x)
     return sm4_key_linear(sm4_sbox_word(x));
 }
 
-static int sm4_set_key(const uint8_t *key, SM4_KEY *ks)
+static int SM4_UNUSED sm4_set_key(const uint8_t *key, SM4_KEY *ks)
 {
-    static const uint32_t FK[4] = {
-        0xa3b1bac6, 0x56aa3350, 0x677d9197, 0xb27022dc
-    };
-
-    static const uint32_t CK[32] = {
-        0x00070E15, 0x1C232A31, 0x383F464D, 0x545B6269,
-        0x70777E85, 0x8C939AA1, 0xA8AFB6BD, 0xC4CBD2D9,
-        0xE0E7EEF5, 0xFC030A11, 0x181F262D, 0x343B4249,
-        0x50575E65, 0x6C737A81, 0x888F969D, 0xA4ABB2B9,
-        0xC0C7CED5, 0xDCE3EAF1, 0xF8FF060D, 0x141B2229,
-        0x30373E45, 0x4C535A61, 0x686F767D, 0x848B9299,
-        0xA0A7AEB5, 0xBCC3CAD1, 0xD8DFE6ED, 0xF4FB0209,
-        0x10171E25, 0x2C333A41, 0x484F565D, 0x646B7279
-    };
-
     uint32_t k[4];
     sm4_prepare_tables();
 
-    k[0] = sm4_load_u32_be(key, 0) ^ FK[0];
-    k[1] = sm4_load_u32_be(key, 1) ^ FK[1];
-    k[2] = sm4_load_u32_be(key, 2) ^ FK[2];
-    k[3] = sm4_load_u32_be(key, 3) ^ FK[3];
+    k[0] = sm4_load_u32_be(key, 0) ^ SM4_FK[0];
+    k[1] = sm4_load_u32_be(key, 1) ^ SM4_FK[1];
+    k[2] = sm4_load_u32_be(key, 2) ^ SM4_FK[2];
+    k[3] = sm4_load_u32_be(key, 3) ^ SM4_FK[3];
 
     for (int i = 0; i < SM4_KEY_SCHEDULE; i += 4) {
-        k[0] ^= sm4_key_sub(k[1] ^ k[2] ^ k[3] ^ CK[i]);
-        k[1] ^= sm4_key_sub(k[2] ^ k[3] ^ k[0] ^ CK[i + 1]);
-        k[2] ^= sm4_key_sub(k[3] ^ k[0] ^ k[1] ^ CK[i + 2]);
-        k[3] ^= sm4_key_sub(k[0] ^ k[1] ^ k[2] ^ CK[i + 3]);
+        k[0] ^= sm4_key_sub(k[1] ^ k[2] ^ k[3] ^ SM4_CK[i]);
+        k[1] ^= sm4_key_sub(k[2] ^ k[3] ^ k[0] ^ SM4_CK[i + 1]);
+        k[2] ^= sm4_key_sub(k[3] ^ k[0] ^ k[1] ^ SM4_CK[i + 2]);
+        k[3] ^= sm4_key_sub(k[0] ^ k[1] ^ k[2] ^ SM4_CK[i + 3]);
         ks->rk[i] = k[0];
         ks->rk[i + 1] = k[1];
         ks->rk[i + 2] = k[2];
@@ -227,8 +232,8 @@ static void sm4_xor_block(uint8_t *out, const uint8_t *a, const uint8_t *b)
     }
 }
 
-static int sm4_cbc_encrypt(const uint8_t *in, uint8_t *out, size_t len,
-                           const SM4_KEY *ks, uint8_t iv[SM4_BLOCK_SIZE])
+static int SM4_UNUSED sm4_cbc_encrypt(const uint8_t *in, uint8_t *out, size_t len,
+                                      const SM4_KEY *ks, uint8_t iv[SM4_BLOCK_SIZE])
 {
     uint8_t block[SM4_BLOCK_SIZE];
 
