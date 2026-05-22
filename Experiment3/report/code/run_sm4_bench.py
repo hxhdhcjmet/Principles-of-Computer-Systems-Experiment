@@ -26,6 +26,43 @@ VARIANTS = [
         "mode": "cbc_encrypt_single",
         "pthread": False,
         "threaded": False,
+        "targets": ["wsl-arch", "qemu-riscv"],
+    },
+    {
+        "name": "single_riscv_zksed",
+        "source": "sm4_single_stream_riscv_zksed.c",
+        "mode": "cbc_encrypt_single",
+        "pthread": False,
+        "threaded": False,
+        "targets": ["qemu-riscv"],
+    },
+    {
+        "name": "multibuffer_bitslice",
+        "source_by_target": {
+            "wsl-arch": "sm4_multibuffer_bitslice_x86.c",
+            "qemu-riscv": "sm4_multibuffer_bitslice_rv64.c",
+        },
+        "mode": "cbc_encrypt_multi_buffer",
+        "pthread": False,
+        "threaded": False,
+        "targets": ["wsl-arch", "qemu-riscv"],
+        "data_len_scale": 32,
+        "loop_scale": 10,
+        "reported_threads": 256,
+        "extra_cflags_by_target": {
+            "wsl-arch": ["-mavx2"],
+            "qemu-riscv": ["-march=rv64gcv", "-mabi=lp64d"],
+        },
+    },
+    {
+        "name": "multibuffer_simd",
+        "source": "sm4_multibuffer_simd.c",
+        "mode": "cbc_encrypt_multi_buffer",
+        "pthread": False,
+        "threaded": False,
+        "targets": ["wsl-arch"],
+        "extra_cflags": ["-mavx2"],
+        "reported_threads": 8,
     },
     {
         "name": "multibuffer_original",
@@ -33,6 +70,7 @@ VARIANTS = [
         "mode": "cbc_encrypt_multi_buffer",
         "pthread": True,
         "threaded": True,
+        "targets": ["wsl-arch", "qemu-riscv"],
     },
     {
         "name": "multibuffer_table",
@@ -40,6 +78,7 @@ VARIANTS = [
         "mode": "cbc_encrypt_multi_buffer",
         "pthread": True,
         "threaded": True,
+        "targets": ["wsl-arch", "qemu-riscv"],
     },
     {
         "name": "decrypt_parallel_original",
@@ -47,6 +86,7 @@ VARIANTS = [
         "mode": "cbc_decrypt_parallel",
         "pthread": True,
         "threaded": True,
+        "targets": ["wsl-arch", "qemu-riscv"],
     },
     {
         "name": "decrypt_parallel_table",
@@ -54,6 +94,7 @@ VARIANTS = [
         "mode": "cbc_decrypt_parallel",
         "pthread": True,
         "threaded": True,
+        "targets": ["wsl-arch", "qemu-riscv"],
     },
 ]
 
@@ -110,11 +151,19 @@ def parse_output(text):
 
 
 def compile_binary(args, variant, opt, threads):
-    src = ROOT / variant["source"]
+    source = variant.get("source_by_target", {}).get(args.target, variant.get("source"))
+    src = ROOT / source
     suffix = f"{variant['name']}_{opt}"
     if variant["threaded"]:
         suffix += f"_t{threads}"
     binary = args.build_dir / suffix
+
+    data_len = args.data_len
+    loop = args.loop
+    if "data_len_scale" in variant:
+        data_len = max(16, (data_len // variant["data_len_scale"]) // 16 * 16)
+    if "loop_scale" in variant:
+        loop = max(1, loop // variant["loop_scale"])
 
     cmd = [
         args.compiler,
@@ -122,8 +171,8 @@ def compile_binary(args, variant, opt, threads):
         f"-{opt}",
         "-Wall",
         "-Wextra",
-        f"-DDATA_LEN={args.data_len}",
-        f"-DLOOP={args.loop}",
+        f"-DDATA_LEN={data_len}",
+        f"-DLOOP={loop}",
     ]
 
     if variant["threaded"]:
@@ -135,6 +184,8 @@ def compile_binary(args, variant, opt, threads):
     if variant["pthread"]:
         cmd.append("-pthread")
 
+    cmd.extend(variant.get("extra_cflags", []))
+    cmd.extend(variant.get("extra_cflags_by_target", {}).get(args.target, []))
     cmd.extend(args.extra_cflags)
     cmd.extend([str(src), "-o", str(binary)])
 
@@ -153,6 +204,7 @@ def append_csv(path, row):
 
 
 def build_row(args, variant, opt, threads, binary, compile_cmd, parsed):
+    reported_threads = threads if variant["threaded"] else variant.get("reported_threads", 1)
     return {
         "timestamp": datetime.now().isoformat(timespec="seconds"),
         "target": args.target,
@@ -160,7 +212,7 @@ def build_row(args, variant, opt, threads, binary, compile_cmd, parsed):
         "opt": opt,
         "variant": variant["name"],
         "mode": variant["mode"],
-        "threads": threads if variant["threaded"] else 1,
+        "threads": parsed.get("threads", reported_threads),
         "data_len": parsed.get("data_len", args.data_len),
         "loop": parsed.get("loop", args.loop),
         "time_s": parsed.get("time_s", ""),
@@ -256,6 +308,8 @@ def main():
     qemu_jobs = []
     for opt in opts:
         for variant in variants:
+            if args.target not in variant.get("targets", ["wsl-arch", "qemu-riscv"]):
+                continue
             threads_to_build = thread_counts if variant["threaded"] else [1]
             for threads in threads_to_build:
                 binary, compile_cmd = compile_binary(args, variant, opt, threads)
@@ -266,7 +320,7 @@ def main():
                     "opt": opt,
                     "variant": variant["name"],
                     "mode": variant["mode"],
-                    "threads": threads if variant["threaded"] else 1,
+                    "threads": threads if variant["threaded"] else variant.get("reported_threads", 1),
                     "cflags": cflags_text,
                 })
 

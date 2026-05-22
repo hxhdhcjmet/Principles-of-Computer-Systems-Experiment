@@ -84,6 +84,8 @@ run_one() {
 for opt in $OPT_LEVELS; do
     run_one "single_original_${opt}" "$opt" "single_original" "cbc_encrypt_single" "1"
     run_one "single_table_${opt}" "$opt" "single_table" "cbc_encrypt_single" "1"
+    run_one "single_riscv_zksed_${opt}" "$opt" "single_riscv_zksed" "cbc_encrypt_single" "1"
+    run_one "multibuffer_bitslice_${opt}" "$opt" "multibuffer_bitslice" "cbc_encrypt_multi_buffer" "256"
 
     for threads in $THREAD_COUNTS; do
         run_one "multibuffer_original_${opt}_t${threads}" "$opt" "multibuffer_original" "cbc_encrypt_multi_buffer" "$threads"

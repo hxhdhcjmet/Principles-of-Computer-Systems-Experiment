@@ -1,30 +1,31 @@
-\section{实验环境} % 按需要,根据实际运行环境修改
+\section{实验环境}
+
 \begin{itemize}
- \item 硬件环境1:
-\begin{itemize}
-    \item 处理器:13th Gen Intel(R) Core(TM) i5-13420H(12 CPUs),~2.1GHz
-    \item 内存:16384MB RAM
- \end{itemize}
-\item 硬件环境2:
- \begin{itemize}
-    \item 处理器:Apple M4(4+6)
-    \item 内存:16384MB RAM
- \end{itemize}
- \item 软件环境1:
- \begin{itemize}
-    \item 操作系统:Windows11
-    \item VMware Workstation Pro 17:Ubuntu 22.04 LTS系统,7.8GB内存,4处理器,300GB硬盘
-    \item Arch Linux x86\_64(内核:Linux 6.6.87.2-microsoft-standard-WSL2)
+    \item 硬件环境 1（本地测试与 QEMU 宿主环境）
     \begin{itemize}
-      \item L1d\quad cache:288KiB(6 instances)
-      \item L1i \quad cache:192 KiB(6 instances)
-      \item L2\quad cache:7.5 MiB(6 instances)
-      \item L3\quad cache:11MiB(1 instances)
+        \item 处理器：13th Gen Intel(R) Core(TM) i5-13420H
+        \item 内存：16 GB
     \end{itemize}
- \end{itemize}
- \item 软件环境2:
-   \begin{itemize}
-      \item 操作系统:macOS 26.3.1 (25D2128)
-      \item Docker Ubuntu 22.04 LTS系统,8GB内存
-   \end{itemize}
+
+    \item 硬件环境 2
+    \begin{itemize}
+        \item 处理器：Apple M4
+        \item 内存：16 GB
+    \end{itemize}
+
+    \item 软件环境 1（本实验正文主环境）
+    \begin{itemize}
+        \item 操作系统：Windows 11
+        \item WSL2：Arch Linux x86\_64
+        \item 交叉编译工具链：\verb|riscv64-unknown-linux-gnu-gcc|
+        \item 模拟环境：QEMU System RISC-V + OpenSBI + Linux
+    \end{itemize}
+
+    \item 软件环境 2
+    \begin{itemize}
+        \item 操作系统：macOS
+        \item Docker Ubuntu 22.04 LTS
+    \end{itemize}
 \end{itemize}
+
+其中x86主机环境主要用于代码调试、参考性能观察和新增实现的快速验证。

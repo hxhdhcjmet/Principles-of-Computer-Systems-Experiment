@@ -1,6 +1,28 @@
 \appendix
-\section{sm4原始代码}
-加密代码如下\cite{openssl-github}\footnote{代码参考了OpenSSL项目的sm4.c文件,已做适当修改以适应实验需求。}
+
+\section{SM4 原始代码}
+代码参考了 OpenSSL 项目的 \verb|sm4.c| 文件，并根据实验需要进行了适当修改\cite{openssl-github}。
 \lstinputlisting[style=vscode]{code/sm4_original.c}
+
 \section{查表优化版本}
 \lstinputlisting[style=vscode]{code/sm4_table.c}
+
+\section{SIMD 向量化版本（x86\_64）}
+该版本使用 Intel AVX2 指令集实现多缓冲区并行加密，仅在 x86 主机环境中运行。
+\lstinputlisting[style=vscode]{code/sm4_multibuffer_simd.c}
+
+% \section{Bit-Slice 通用核心}
+% 该文件给出 bit-slice 的通用逻辑核心，用于统一支持不同平台入口版本。
+% \lstinputlisting[style=vscode]{code/sm4_multibuffer_bitslice.c}
+
+% \section{Bit-Slice x86 版本}
+% 该版本面向 x86 主机环境，作为主机侧 bit-slice 调试与对照实现。
+% \lstinputlisting[style=vscode]{code/sm4_multibuffer_bitslice_x86.c}
+
+% \section{Bit-Slice RISC-V 版本}
+% 该版本面向 RISC-V 平台，是本实验中用于验证 bit-slice 方法在 RISC-V 上可实现性的对应实现。
+% \lstinputlisting[style=vscode]{code/sm4_multibuffer_bitslice_rv64.c}
+
+% \section{RISC-V 指令优化版本}
+% 该版本实现了基于 Zksed 思路的 RISC-V 指令级优化单数据流加密实现。
+% \lstinputlisting[style=vscode]{code/sm4_single_stream_riscv_zksed.c}
