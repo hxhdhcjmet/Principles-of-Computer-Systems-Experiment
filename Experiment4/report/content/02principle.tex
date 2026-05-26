@@ -1,0 +1,59 @@
+\section{实验原理}
+\subsection{SM4算法}
+% 复制粘贴自上一份实验
+% 实验题目仅仅要求"加密算法"
+SM4算法采用非平衡Feistel结构,分组长度为128bit,密钥长度为128bit,迭代轮数为32轮。
+\subsubsection{加密算法}
+输入128bit明文\(m\),按32-bit分为4个字\(X^0_0,X^1_0,X^2_0,X^3_0\)
+进行32轮迭代,每轮迭代都有一个32bit的轮密钥$K_{i-1}$参与计算,第$i(i = 1,2,\cdots,32)$轮的计算如下:
+\[
+\begin{aligned}
+    X^0_{i} &= X^1_{i-1} \\
+    X^1_{i} &= X^2_{i-1} \\
+    X^2_{i} &= X^3_{i-1} \\
+    X^3_{i} &= X^0_{i-1} \oplus T(X^1_{i-1}\oplus X^2_{i-1}\oplus X^3_{i-1}\oplus K_{i-1})
+\end{aligned}
+\]
+对最后一轮迭代的输出进行反序变化$R$得到128bit密文\(c\):
+\[
+c = (Y^0,Y^1,Y^2,Y^3) = R(X^{0}_{32},X_{32}^1,X_{32}^2,X_{32}^3) = (X^3_{32},X^2_{32},X^1_{32},X^0_{32})
+\]
+其中函数$T:\mathbb{F}_2^{32}\to \mathbb{F}_2^{32}$由非线性变换\(S\)和线性变换\(L\)组成:
+\[    T = L\circ  S   \]
+设函数$T$的32bit输入为$A = (a_0,a_1,a_2,a_3) \in (\mathbb{F}_{2^8})^4$,则
+\begin{itemize}
+    \item 非线性变换$S$:对每个字节单独进行查表代替操作,即
+    \[ B = (S(a_0),S(a_1),S(a_2),S(a_3))  \]
+类似AES加密,SM4算法采用1个S盒,查表时将每个字节的高4bit看作行标,低4bit看作列标,对应取值即为输出字节。
+    \item 线性变换$L$:对非线性变换$S$的32bit输出$B$,计算
+    \[   L(B) = B \oplus (B \lll 2) \oplus (B \lll 10) \oplus (B \lll 18) \oplus (B \lll 24) \]
+    其中$\lll x$表示循环左移$x$bit。
+\end{itemize}
+\subsubsection{轮密钥生成方案}
+SM4算法的主密钥$K$为128bit,轮密钥生成方案也采用非平衡Feistel结构。
+轮密钥\(K_i\)由主密钥\(K\)通过密钥扩展算法生成,具体做法为:
+先将主密钥\(K\)按32-bit分为4个字\(MK_0,MK_1,MK_2,MK_3\),然后与32-bit常量\(FK_i\)进行异或得到初始轮密钥:
+\[
+\begin{aligned}
+    K_{-4} &= MK_0 \oplus FK_0 \\
+    K_{-3} &= MK_1 \oplus FK_1 \\
+    K_{-2} &= MK_2 \oplus FK_2 \\
+    K_{-1} &= MK_3 \oplus FK_3
+\end{aligned}
+\]
+其中$FK_0 = $0xA3B1BAC6,$FK_1 = $0x56AA3350,$FK_2 = $0x677D9197,$FK_3 = $0xB27022DC。
+接着通过迭代计算得到后续轮密钥:
+\[
+K_i = K_{i-4} \oplus T'(K_{i-3} \oplus K_{i-2} \oplus K_{i-1} \oplus CK_i), \quad i=0,1,...,31
+\]
+其中$CK_i$为固定参数;\(T'\)函数与\(T\)函数类似,但线性变换部分不同,仅需替换$L$为$L'$:
+\[
+\begin{aligned}
+    T'(X) &= L'(S(X)) \\
+    L'(B) &= B \oplus (B <<< 13) \oplus (B <<< 23)
+\end{aligned}  
+\]
+
+\subsubsection{解密算法}
+因为采用广义Feistel结构,所以SM4算法具有加解密结构一致性,因此解密算法与加密算法一致,仅需将参与第$i(i = 1,2,\cdots,32)$轮迭代
+运算的轮密钥由$K_{i-1}$替换为$K_{32-i}$即可。
