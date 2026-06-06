@@ -1,0 +1,138 @@
+实验四 基于RISC-V开发板的加密算法性能测试与加速比分析
+一、实验内容
+本次实验基于每组分配到的RISC-V架构开发板，围绕openHiTLS中SM3或SM4加密算法开展不同技术方案下的性能测试与加速比分析，需设计并说明至少两种不同方案，完成运行时间、吞吐率和加速比测试。
+
+二、基本任务
+1.	学习并掌握RISC-V架构的开发版（荔枝派、香橙派）的基本使用方法。
+2.	学习openHiTLS加密算法的使用示例，能够正确运行SM3或SM4实例。
+3.	记录各方案的运行时间，吞吐率以及加速比测试。
+4.	结合技术方案差异、开发板硬件条件、系统环境和测试方法等，对实验结果进行分析。
+5.	若某一技术方案依赖开发板不支持的指令扩展，应说明原因并选择替代方案。
+
+三、考察重点
+1.	RISC-V架构开发版（荔枝派、香橙派）的使用，加密算法示例程序的编译、运行与测试；
+2.	penHiTLS 中 SM3/SM4 示例程序的使用与正确性验证。实验方案设计、性能差异原因分析。
+
+四、注意事项
+1. 实验报告需交代清楚实验的硬件软件环境。
+五、参考方案
+1.	SM4默认循环 && SM4循环展开
+2.	SM4默认XBox查表 && XBox合并
+3.	SM4默认轮函数连续异或 && 减少指令依赖（将连续写同一变量改为临时变量合并后一次写回）
+4.	备选：默认字节序转换 && RISC-V B扩展rev8转换，但仅支持zbb的板卡，开发板无zbb时不支持测试。
+5.	若开发板支持其他扩展，也可通过其他扩展方案进行测试。
+六、实验报告要求
+1. 4-5人一组完成，提交一份实验报告；
+2. 提交形式为.zip压缩文件，命名方式为“张三-李四-王五-赵六-实验三报告.pdf”（命名方式不正确会扣分）。压缩包中需中包括修改后的代码文件和实验报告文件，实验报告格式为word或pdf，并在报告开头写上全组成员名字学号。发送到山大网盘：
+https://icloud.qd.sdu.edu.cn:7777/link/205B7780A6916613A56EF9C49CC2895B
+3. 提交报告的截止时间为6月11日（周四晚上11点59分59秒）。晚交的报告将会被扣分。
+4. 所有雷同的实验报告（包括和之前高年级提交的实验报告雷同），本次实验不得分。同一学生本学期出现2次及以上雷同的实验报告，本学期实验为0分。
+5.严格遵守实验室的规章流程，同时请爱护实验器材，如有器材损坏第一时间报告助教。
+
+按如下步骤可测试sm4示例，附录中介绍了使用sm3进行测试的修改方法。
+荔枝派版本：
+	1、更换镜像源
+		sudo cp /etc/apt/sources.list /etc/apt/sources_init.list
+		sudo vim /etc/apt/sources.list
+		将sources.list中的内容全部删除后改为
+		deb http://deb.debian.org/debian sid main
+	 	deb http://deb.debian.org/debian unreleased main
+ 		deb-src http://deb.debian.org/debian sid main
+		将sources.list保存后输入
+		sudo apt update
+2、安装依赖项：
+		sudo apt install cmake make git g++-riscv64-linux-gnu gcc-riscv64-linux-gnu libsctp-dev
+3、获取libboundscheck源码并编译
+		mkdir work && cd work
+		git clone https://gitee.com/openeuler/libboundscheck.git
+		cd libboundscheck
+		make CC=riscv64-linux-gnu-gcc
+		sudo cp ./lib/libboundscheck.so /usr/local/lib
+
+vim ~/.bashrc
+
+在文件的最后面加上：
+
+export LD_LIBRARY_PATH=/home/sipeed/work/libboundscheck/lib:$LD_LIBRARY_PATH
+
+	然后保存退出
+source ~/.bashrc
+
+4、获取 openhitls源码并编译
+		cd ~/work
+		git clone --recurse-submodules https://gitcode.com/openhitls/openhitls.git
+		cd openhitls
+		mkdir build && cd build
+		python3 ../configure.py
+		cmake .. -DCMAKE_CXX_COMPILER=riscv64-linux-gnu-gcc 
+		make -j4
+		sudo make install
+5、运行示例代码
+		cd ~/work/openhitls/testcode/demo/
+		mkdir build && cd build
+		cmake .. -DCMAKE_CXX_COMPILER=riscv64-linux-gnu-gcc
+		make 
+		./sm4cbc
+
+
+
+
+香橙派版本：
+1、安装依赖项：
+		sudo apt install cmake make git g++-riscv64-linux-gnu gcc-riscv64-linux-gnu libsctp-dev
+2、获取libboundscheck源码并编译
+		mkdir work && cd work
+		git clone https://gitee.com/openeuler/libboundscheck.git
+		cd libboundscheck
+		make CC=riscv64-linux-gnu-gcc
+		sudo cp ./lib/libboundscheck.so /usr/local/lib
+
+vim ~/.bashrc
+
+在文件的最后面加上：
+
+export LD_LIBRARY_PATH=/home/orangepi/work/libboundscheck/lib:$LD_LIBRARY_PATH
+
+	然后保存退出
+source ~/.bashrc
+3、获取 openhitls源码并编译
+		cd ~/work
+		git clone --recurse-submodules https://gitcode.com/openhitls/openhitls.git
+		cd openhitls
+		mkdir build && cd build
+		python3 ../configure.py
+		cmake .. -DCMAKE_CXX_COMPILER=riscv64-linux-gnu-gcc 
+		make -j4
+		sudo make install
+4、运行示例代码
+		cd ~/work/openhitls/testcode/demo/
+		mkdir build && cd build
+		cmake .. -DCMAKE_CXX_COMPILER=riscv64-linux-gnu-gcc
+		make 
+		./sm4cbc
+
+
+qume等工具优化扩展指令集：
+自行研究。
+
+附录：
+如选择对sm3进行测试，要在获取openhitls源码后(即git clone后)，找到openhitls\testcode\demo\hash.c文件
+将原程序中的
+    uint8_t expResult[] = {0xd5, 0xc3, 0x03, 0x15, 0xf7, 0x2e, 0xd0, 0x5f, 0xe5, 0x19, 0xa1, 0xbf, 0x75,
+        0xab, 0x5f, 0xd0, 0xff, 0xec, 0x5a, 0xc1, 0xac, 0xb0, 0xda, 0xf6, 0x6b, 0x6b, 0x76, 0x95, 0x98,
+        0x59, 0x45, 0x09};
+修改为
+    uint8_t expResult[] = {0x14, 0x08, 0x1b, 0x03, 0xc8, 0xd6, 0xa9, 0x97, 0x12, 0x2b, 0xfa, 0x2c, 0x87,
+            0x47, 0x8d, 0xe9, 0xb5, 0x23, 0xff, 0x6c, 0x96, 0x1b, 0xaa, 0xd3, 0xe1, 0x86, 0x32, 0xf6, 0x4d,
+            0xc1, 0x04, 0xb4};
+	将原程序中的
+	ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_SHA256);
+修改为
+ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_SM3);
+最后运行时将
+./sm2sign
+修改为
+./hash
+即可
+
+修改文件命令参见：https://blog.csdn.net/qq_27815483/article/details/140175229?ops_request_misc=%257B%2522request%255Fid%2522%253A%25221d64350ddb48d8f2c90352e3bea486fd%2522%252C%2522scm%2522%253A%252220140713.130102334..%2522%257D&request_id=1d64350ddb48d8f2c90352e3bea486fd&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~top_positive~default-1-140175229-null-null.142^v102^pc_search_result_base5&u

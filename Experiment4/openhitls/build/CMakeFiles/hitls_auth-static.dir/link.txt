@@ -1,2 +1,0 @@
-/usr/bin/ar qc libhitls_auth.a "CMakeFiles/privpass_token-objs.dir/auth/privpass_token/src/privpass_token.c.o" "CMakeFiles/privpass_token-objs.dir/auth/privpass_token/src/privpass_token_util.c.o" "CMakeFiles/privpass_token-objs.dir/auth/privpass_token/src/privpass_token_wrapper.c.o"
-/usr/bin/ranlib libhitls_auth.a
