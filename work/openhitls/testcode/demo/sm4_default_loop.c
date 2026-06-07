@@ -122,8 +122,11 @@ uint64_t bench_default_encrypt(const uint32_t rk[32],
     free(data);
     free(out);
 
-    uint64_t elapsed_us = (uint64_t)(end.tv_sec  - start.tv_sec)  * 1000000ULL
-                        + (uint64_t)(end.tv_nsec - start.tv_nsec) / 1000ULL;
+    int64_t sec_diff  = end.tv_sec  - start.tv_sec;
+    int64_t nsec_diff = end.tv_nsec - start.tv_nsec;
+    if (nsec_diff < 0) { sec_diff -= 1; nsec_diff += 1000000000L; }
+    uint64_t elapsed_us = (uint64_t)sec_diff * 1000000ULL
+                        + (uint64_t)nsec_diff / 1000ULL;
     return elapsed_us;
 }
 

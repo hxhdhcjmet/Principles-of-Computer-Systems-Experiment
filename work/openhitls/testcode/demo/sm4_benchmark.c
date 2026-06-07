@@ -228,7 +228,7 @@ static void runBenchmarks(FILE *out_file, FILE *csv_file)
 
     printf("\n");
     printf("==========================================================\n");
-    printf("  SM4 Performance Benchmark — 3 Optimization Schemes\n");
+    printf("  SM4 Performance Benchmark — %zu Optimization Schemes\n", NUM_SCHEMES);
     printf("==========================================================\n");
     printf("  Data sizes: ");
     for (size_t d = 0; d < NUM_DATA_POINTS; d++) {
