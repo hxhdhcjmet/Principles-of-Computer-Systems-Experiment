@@ -30,9 +30,9 @@ SRCDIR   = .
 BUILDDIR = build
 
 # ---- Source files ----
-COMMON_SRCS = sm4_default_loop.c sm4_unrolled.c sm4_reduced_dep.c
+COMMON_SRCS = sm4_default_loop.c sm4_unrolled.c sm4_reduced_dep.c sm4_xbox.c sm4_xbox_merged.c
 BENCH_SRCS  = sm4_benchmark.c $(COMMON_SRCS)
-STANDALONE_TARGETS = sm4_default_loop sm4_unrolled sm4_reduced_dep
+STANDALONE_TARGETS = sm4_default_loop sm4_unrolled sm4_reduced_dep sm4_xbox sm4_xbox_merged
 BENCH_TARGET       = sm4_benchmark
 
 # ---- Build targets ----
@@ -68,6 +68,12 @@ $(BUILDDIR)/sm4_unrolled: $(SRCDIR)/sm4_unrolled.c
 	$(CC_CROSS) $(CFLAGS_CROSS) -o $@ $< -lm
 
 $(BUILDDIR)/sm4_reduced_dep: $(SRCDIR)/sm4_reduced_dep.c
+	$(CC_CROSS) $(CFLAGS_CROSS) -o $@ $< -lm
+
+$(BUILDDIR)/sm4_xbox: $(SRCDIR)/sm4_xbox.c
+	$(CC_CROSS) $(CFLAGS_CROSS) -o $@ $< -lm
+
+$(BUILDDIR)/sm4_xbox_merged: $(SRCDIR)/sm4_xbox_merged.c
 	$(CC_CROSS) $(CFLAGS_CROSS) -o $@ $< -lm
 
 clean:

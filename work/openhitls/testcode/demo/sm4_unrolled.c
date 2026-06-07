@@ -32,7 +32,6 @@ static void sm4EncryptBlock(const uint32_t rk[32],
     uint32_t X0, X1, X2, X3;
     uint32_t tmp, t, newX;
 
-    sm4LoadBlock(in, (uint32_t[]){0,0,0,0});
     /* Manual load to scalars for unrolled access */
     {
         uint32_t arr[4];

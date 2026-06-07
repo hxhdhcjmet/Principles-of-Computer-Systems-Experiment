@@ -99,13 +99,10 @@ static inline uint8_t sm4Sbox(uint8_t in)
  * ========================================================================== */
 static inline uint32_t sm4S(uint32_t a)
 {
-    uint32_t b;
-    uint8_t *p = (uint8_t *)&b;
-    p[0] = sm4Sbox((uint8_t)((a >> 24) & 0xFF));
-    p[1] = sm4Sbox((uint8_t)((a >> 16) & 0xFF));
-    p[2] = sm4Sbox((uint8_t)((a >>  8) & 0xFF));
-    p[3] = sm4Sbox((uint8_t)( a        & 0xFF));
-    return b;
+    return ((uint32_t)sm4Sbox((a >> 24) & 0xFF) << 24)
+         | ((uint32_t)sm4Sbox((a >> 16) & 0xFF) << 16)
+         | ((uint32_t)sm4Sbox((a >>  8) & 0xFF) <<  8)
+         | ((uint32_t)sm4Sbox( a        & 0xFF));
 }
 
 /* ==========================================================================

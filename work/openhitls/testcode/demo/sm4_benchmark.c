@@ -45,6 +45,12 @@ extern uint64_t bench_unrolled_encrypt(const uint32_t rk[32],
 extern uint64_t bench_reduceddep_encrypt(const uint32_t rk[32],
                                          size_t data_size, int repeat);
 
+extern uint64_t bench_xbox_encrypt(const uint32_t rk[32],
+                                   size_t data_size, int repeat);
+
+extern uint64_t bench_xbox_merged_encrypt(const uint32_t rk[32],
+                                          size_t data_size, int repeat);
+
 /* ==========================================================================
  * Scheme metadata
  * ========================================================================== */
@@ -69,6 +75,16 @@ static const Scheme schemes[] = {
         "reduced_dep",
         "Reduced XOR dependency chain",
         bench_reduceddep_encrypt
+    },
+    {
+        "xbox",
+        "T-box lookup (1 KB table, runtime rotations)",
+        bench_xbox_encrypt
+    },
+    {
+        "xbox_merged",
+        "4 merged T-box tables (4 KB, zero runtime shifts)",
+        bench_xbox_merged_encrypt
     }
 };
 
@@ -399,6 +415,8 @@ int main(void)
     all_ok &= verifyScheme("default_loop",  defaultEncryptBlock);
     all_ok &= verifyScheme("unrolled",     unrolledEncryptBlock);
     all_ok &= verifyScheme("reduced_dep",  reducedEncryptBlock);
+    all_ok &= verifyScheme("xbox",         defaultEncryptBlock);
+    all_ok &= verifyScheme("xbox_merged",  defaultEncryptBlock);
 
     if (!all_ok) {
         printf("\n[ABORT] Correctness check failed — benchmark stopped.\n");
