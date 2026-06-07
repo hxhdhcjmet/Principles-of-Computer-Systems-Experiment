@@ -1,31 +1,22 @@
 /*
- * Scheme 5: SM4 XBox Merged (4 pre-shifted T-box tables)
+ * Scheme 7: SM4 4-Table Merged XBox + Zbb ISA Extension
  *
- * Extends the single T-box approach by precomputing four rotated copies
- * of the T-box, eliminating ALL runtime shift/rotate instructions from
- * the round function.
+ * Identical algorithm to sm4_xbox_merged.c (4 pre-shifted T-box tables),
+ * compiled with -march=rv64gc_zba_zbb_zbc_zbs.
  *
- * Tables (1 KB each, 4 KB total):
- *   XBOX0[i] = L(SBOX[i])           — LSB position
- *   XBOX1[i] = XBOX0[i] <<< 8       — pre-shifted by 1 byte
- *   XBOX2[i] = XBOX0[i] <<< 16      — pre-shifted by 2 bytes
- *   XBOX3[i] = XBOX0[i] <<< 24      — pre-shifted by 3 bytes (MSB position)
+ * This is the theoretically fastest software-only SM4 configuration on
+ * this platform: the algorithmic optimum (XBox merged) combined with the
+ * ISA optimum (Zbb for rev8/rori).
  *
- * Round function (4 lookups + 4 XORs, zero shifts):
- *   X0 ^= XBOX3[b0] ^ XBOX2[b1] ^ XBOX1[b2] ^ XBOX0[b3]
+ * Zbb benefits on top of XBox merged:
+ *   - rev8:   accelerates sm4LoadBlock/sm4StoreBlock big-endian conversion
+ *   - rori:   accelerates ROL() calls during XBox table initialization
+ *   - General: minor codegen improvements in addressing, bitfield ops
  *
- * where b0..b3 are bytes of (X1⊕X2⊕X3⊕rk) from MSB to LSB.
- *
- * This is the approach used by the official openHiTLS SM4 implementation
- * (crypt_sm4.c) and represents the most efficient software-only SM4
- * on platforms without hardware AES/SM4 acceleration.
- *
- * Optimization rationale:
- *   - Zero runtime rotations — all shifting is precomputed
- *   - 4 independent table lookups per round → ILP-friendly
- *   - 4 KB total table size — fits in L1 data cache on most RISC-V cores
- *
- * Trade-off: 4× table memory vs. sm4_xbox.c (4 KB vs 1 KB)
+ * Comparison target: sm4_xbox_merged (same algorithm, baseline ISA).
+ * Gap between zbb_optimized and default_loop  = ISA gains alone.
+ * Gap between xbox_zbb       and xbox_merged = ISA's remaining headroom
+ *                                              after algorithmic optimization.
  */
 
 #include <stdio.h>
@@ -36,25 +27,22 @@
 #include "sm4_common.h"
 
 /* ==========================================================================
- * Four pre-shifted T-box tables (4 × 256 × 4 bytes = 4 KB)
- *
- * Initialized once on first use.  XBOX0 = base T-box; XBOX1/2/3 are
- * rotated-left copies (XBOX_k[i] = ROL(XBOX0[i], 8*k)).
+ * Four pre-shifted T-box tables (same as sm4_xbox_merged.c)
  * ========================================================================== */
 static uint32_t XBOX0[256];
 static uint32_t XBOX1[256];
 static uint32_t XBOX2[256];
 static uint32_t XBOX3[256];
-static int xbox_merged_initialized = 0;
+static int xbox_zbb_initialized = 0;
 
 static inline uint32_t ROL(uint32_t x, int n)
 {
     return (x << n) | (x >> (32 - n));
 }
 
-static void initXboxMerged(void)
+static void initXboxZbb(void)
 {
-    if (xbox_merged_initialized) return;
+    if (xbox_zbb_initialized) return;
 
     for (int i = 0; i < 256; i++) {
         XBOX0[i] = sm4L((uint32_t)sm4Sbox((uint8_t)i));
@@ -62,15 +50,17 @@ static void initXboxMerged(void)
         XBOX2[i] = ROL(XBOX0[i], 16);
         XBOX3[i] = ROL(XBOX0[i], 24);
     }
-    xbox_merged_initialized = 1;
+    xbox_zbb_initialized = 1;
 }
 
 /* ==========================================================================
  * Encryption — 4 merged XBox tables (zero runtime shifts)
  *
- * Equivalent to T(X1⊕X2⊕X3⊕rk), decomposed as:
- *   X0 ^= XBOX3[(t>>24)&0xFF] ^ XBOX2[(t>>16)&0xFF]
- *       ^ XBOX1[(t>> 8)&0xFF] ^ XBOX0[ t     &0xFF]
+ * The compiler, with Zbb, generates:
+ *   - rev8 for loading/storing big-endian words
+ *   - rori/ror for table initialization ROL() calls
+ * The inner loop (table lookups + XOR) is already optimal in the
+ * baseline version; Zbb mainly benefits the periphery.
  * ========================================================================== */
 static void sm4EncryptBlock(const uint32_t rk[32],
                             const uint8_t in[16],
@@ -83,7 +73,7 @@ static void sm4EncryptBlock(const uint32_t rk[32],
         X0 = arr[0]; X1 = arr[1]; X2 = arr[2]; X3 = arr[3];
     }
 
-    initXboxMerged();
+    initXboxZbb();
 
     for (int i = 0; i < 32; i++) {
         uint32_t t    = X1 ^ X2 ^ X3 ^ rk[i];
@@ -102,7 +92,7 @@ static void sm4EncryptBlock(const uint32_t rk[32],
 }
 
 /* ==========================================================================
- * Decryption — same merged XBox with reversed round-key order
+ * Decryption
  * ========================================================================== */
 static void sm4DecryptBlock(const uint32_t rk[32],
                             const uint8_t in[16],
@@ -115,7 +105,7 @@ static void sm4DecryptBlock(const uint32_t rk[32],
         X0 = arr[0]; X1 = arr[1]; X2 = arr[2]; X3 = arr[3];
     }
 
-    initXboxMerged();
+    initXboxZbb();
 
     for (int i = 31; i >= 0; i--) {
         uint32_t t    = X1 ^ X2 ^ X3 ^ rk[i];
@@ -133,10 +123,10 @@ static void sm4DecryptBlock(const uint32_t rk[32],
     }
 }
 
-#ifndef SM4_AS_LIBRARY
 /* ==========================================================================
  * Correctness self-test
  * ========================================================================== */
+#ifndef SM4_AS_LIBRARY
 static int verifyCorrectness(void)
 {
     uint32_t rk[32];
@@ -147,17 +137,17 @@ static int verifyCorrectness(void)
     sm4EncryptBlock(rk, SM4_TEST_PLAINTEXT, cipher);
 
     if (memcmp(cipher, SM4_TEST_CIPHERTEXT, 16) != 0) {
-        printf("[FAIL] sm4_xbox_merged: encryption test vector mismatch\n");
+        printf("[FAIL] sm4_xbox_zbb: encryption test vector mismatch\n");
         return 0;
     }
 
     sm4DecryptBlock(rk, cipher, plain);
     if (memcmp(plain, SM4_TEST_PLAINTEXT, 16) != 0) {
-        printf("[FAIL] sm4_xbox_merged: decryption mismatch\n");
+        printf("[FAIL] sm4_xbox_zbb: decryption mismatch\n");
         return 0;
     }
 
-    printf("[PASS] sm4_xbox_merged: test vector correct\n");
+    printf("[PASS] sm4_xbox_zbb: test vector correct\n");
     return 1;
 }
 #endif /* !SM4_AS_LIBRARY */
@@ -165,9 +155,9 @@ static int verifyCorrectness(void)
 /* ==========================================================================
  * Benchmark harness
  * ========================================================================== */
-uint64_t bench_xbox_merged_encrypt(const uint32_t rk[32],
-                                   size_t data_size,
-                                   int repeat)
+uint64_t bench_xbox_zbb_encrypt(const uint32_t rk[32],
+                                size_t data_size,
+                                int repeat)
 {
     uint8_t *data = (uint8_t *)malloc(data_size);
     uint8_t *out  = (uint8_t *)malloc(data_size);
@@ -193,7 +183,7 @@ uint64_t bench_xbox_merged_encrypt(const uint32_t rk[32],
 }
 
 /* ==========================================================================
- * Standalone main — skipped when SM4_AS_LIBRARY is defined
+ * Standalone main
  * ========================================================================== */
 #ifndef SM4_AS_LIBRARY
 int main(void)
@@ -206,12 +196,12 @@ int main(void)
     size_t data_size = 1024 * 1024;
     int    repeat    = 10;
 
-    uint64_t elapsed = bench_xbox_merged_encrypt(rk, data_size, repeat);
+    uint64_t elapsed = bench_xbox_zbb_encrypt(rk, data_size, repeat);
     double throughput = (double)(data_size * repeat)
                       / ((double)elapsed / 1e6)
                       / (1024.0 * 1024.0);
 
-    printf("SM4 XBox Merged (4 tables) — %zu bytes × %d repeats\n", data_size, repeat);
+    printf("SM4 XBox Merged + Zbb — %zu bytes × %d repeats\n", data_size, repeat);
     printf("  Elapsed  : %lu μs\n", elapsed);
     printf("  Throughput: %.3f MB/s\n", throughput);
 

@@ -152,6 +152,7 @@ static void sm4DecryptBlock(const uint32_t rk[32],
     }
 }
 
+#ifndef SM4_AS_LIBRARY
 /* ==========================================================================
  * Correctness self-test
  * ========================================================================== */
@@ -178,6 +179,7 @@ static int verifyCorrectness(void)
     printf("[PASS] sm4_unrolled: test vector correct\n");
     return 1;
 }
+#endif /* !SM4_AS_LIBRARY */
 
 /* ==========================================================================
  * Benchmark harness

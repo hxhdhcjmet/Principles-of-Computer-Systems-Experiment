@@ -51,6 +51,12 @@ extern uint64_t bench_xbox_encrypt(const uint32_t rk[32],
 extern uint64_t bench_xbox_merged_encrypt(const uint32_t rk[32],
                                           size_t data_size, int repeat);
 
+extern uint64_t bench_zbb_encrypt(const uint32_t rk[32],
+                                  size_t data_size, int repeat);
+
+extern uint64_t bench_xbox_zbb_encrypt(const uint32_t rk[32],
+                                       size_t data_size, int repeat);
+
 /* ==========================================================================
  * Scheme metadata
  * ========================================================================== */
@@ -85,6 +91,16 @@ static const Scheme schemes[] = {
         "xbox_merged",
         "4 merged T-box tables (4 KB, zero runtime shifts)",
         bench_xbox_merged_encrypt
+    },
+    {
+        "zbb_default",
+        "32-round for-loop + Zbb ISA (rev8/rori)",
+        bench_zbb_encrypt
+    },
+    {
+        "zbb_xbox",
+        "4 merged T-box + Zbb ISA (max optimization)",
+        bench_xbox_zbb_encrypt
     }
 };
 
@@ -417,6 +433,8 @@ int main(void)
     all_ok &= verifyScheme("reduced_dep",  reducedEncryptBlock);
     all_ok &= verifyScheme("xbox",         defaultEncryptBlock);
     all_ok &= verifyScheme("xbox_merged",  defaultEncryptBlock);
+    all_ok &= verifyScheme("zbb_default",  defaultEncryptBlock);
+    all_ok &= verifyScheme("zbb_xbox",     defaultEncryptBlock);
 
     if (!all_ok) {
         printf("\n[ABORT] Correctness check failed — benchmark stopped.\n");
