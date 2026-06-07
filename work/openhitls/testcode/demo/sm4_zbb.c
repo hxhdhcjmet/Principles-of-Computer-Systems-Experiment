@@ -1,17 +1,21 @@
 /*
- * Scheme 1: SM4 Default Loop (Baseline)
+ * Scheme 6: SM4 Default Loop + Zbb ISA Extension
  *
- * This is the standard SM4 implementation using a 32-round for-loop.
- * It serves as the performance BASELINE for speedup comparisons.
+ * Identical algorithm to sm4_default_loop.c (32-round for-loop),
+ * but compiled with -march=rv64gc_zba_zbb_zbc_zbs to enable the
+ * RISC-V Bit-Manipulation extension.
  *
- * Key characteristics:
- *   - 32-round for-loop with branch at each iteration
- *   - Sequential XOR chain: X1 ^ X2 ^ X3 ^ rk[i]
- *   - Standard Feistel shift: X0=X1, X1=X2, X2=X3, X3=new
+ * Zbb benefits for SM4:
+ *   - rev8:    single-instruction 32-bit byte reversal (bswap32)
+ *              replaces 4-shift+mask+OR for big-endian ↔ little-endian
+ *   - rori:    single-instruction rotate-right-immediate
+ *              replaces (x<<n)|(x>>(32-n)) for L/L' rotations
+ *   - andn:    a & ~b in one instruction, useful in bit-clear patterns
  *
- * Bugs fixed from original:
- *   1. L function: (in>>6) corrected to (in>>30) for ROL-2 decomposition
- *   2. Key expansion: now uses correct L' (not L) per GB/T 32907-2016
+ * Comparison target: sm4_default_loop (same algorithm, baseline ISA).
+ * This scheme isolates pure ISA-level gains without algorithmic changes.
+ *
+ * Reference: RISC-V Bit-Manipulation ISA Extension v1.0.0
  */
 
 #include <stdio.h>
@@ -22,7 +26,12 @@
 #include "sm4_common.h"
 
 /* ==========================================================================
- * Encryption — default loop (32 iterations with branch)
+ * Encryption — identical logic to sm4_default_loop.c
+ *
+ * The Zbb optimization comes from the compiler, not manual rewrite:
+ * sm4_common.h static inline functions (sm4T, sm4L, sm4S, sm4LoadBlock,
+ * sm4StoreBlock, etc.) are compiled with Zbb flags and the compiler
+ * automatically selects rev8/rori/andn where applicable.
  * ========================================================================== */
 static void sm4EncryptBlock(const uint32_t rk[32],
                             const uint8_t in[16],
@@ -45,7 +54,7 @@ static void sm4EncryptBlock(const uint32_t rk[32],
 }
 
 /* ==========================================================================
- * Decryption — same structure as encryption, round keys reversed
+ * Decryption
  * ========================================================================== */
 static void sm4DecryptBlock(const uint32_t rk[32],
                             const uint8_t in[16],
@@ -67,10 +76,10 @@ static void sm4DecryptBlock(const uint32_t rk[32],
     sm4StoreBlock(X, out);
 }
 
-#ifndef SM4_AS_LIBRARY
 /* ==========================================================================
- * Correctness self-test — encrypts and decrypts the standard test vector
+ * Correctness self-test
  * ========================================================================== */
+#ifndef SM4_AS_LIBRARY
 static int verifyCorrectness(void)
 {
     uint32_t rk[32];
@@ -81,31 +90,27 @@ static int verifyCorrectness(void)
     sm4EncryptBlock(rk, SM4_TEST_PLAINTEXT, cipher);
 
     if (memcmp(cipher, SM4_TEST_CIPHERTEXT, 16) != 0) {
-        printf("[FAIL] sm4_default_loop: encryption test vector mismatch\n");
+        printf("[FAIL] sm4_zbb: encryption test vector mismatch\n");
         return 0;
     }
 
-    /* Decryption — should recover original plaintext */
     sm4DecryptBlock(rk, cipher, plain);
     if (memcmp(plain, SM4_TEST_PLAINTEXT, 16) != 0) {
-        printf("[FAIL] sm4_default_loop: decryption mismatch\n");
+        printf("[FAIL] sm4_zbb: decryption mismatch\n");
         return 0;
     }
 
-    printf("[PASS] sm4_default_loop: test vector correct\n");
+    printf("[PASS] sm4_zbb: test vector correct\n");
     return 1;
 }
 #endif /* !SM4_AS_LIBRARY */
 
 /* ==========================================================================
- * Benchmark harness — encrypts data_size bytes, repeats `repeat` times
- *
- * Returns elapsed time in MICROSECONDS.
- * Caller computes throughput = (data_size * repeat) / elapsed / 1e6 * MB/s
+ * Benchmark harness
  * ========================================================================== */
-uint64_t bench_default_encrypt(const uint32_t rk[32],
-                               size_t data_size,
-                               int repeat)
+uint64_t bench_zbb_encrypt(const uint32_t rk[32],
+                           size_t data_size,
+                           int repeat)
 {
     uint8_t *data = (uint8_t *)malloc(data_size);
     uint8_t *out  = (uint8_t *)malloc(data_size);
@@ -127,14 +132,11 @@ uint64_t bench_default_encrypt(const uint32_t rk[32],
     int64_t sec_diff  = end.tv_sec  - start.tv_sec;
     int64_t nsec_diff = end.tv_nsec - start.tv_nsec;
     if (nsec_diff < 0) { sec_diff -= 1; nsec_diff += 1000000000L; }
-    uint64_t elapsed_us = (uint64_t)sec_diff * 1000000ULL
-                        + (uint64_t)nsec_diff / 1000ULL;
-    return elapsed_us;
+    return (uint64_t)sec_diff * 1000000ULL + (uint64_t)nsec_diff / 1000ULL;
 }
 
 /* ==========================================================================
- * Standalone main — used for independent testing / debugging.
- * Skipped when compiled as part of the unified benchmark (SM4_AS_LIBRARY).
+ * Standalone main
  * ========================================================================== */
 #ifndef SM4_AS_LIBRARY
 int main(void)
@@ -142,18 +144,17 @@ int main(void)
     uint32_t rk[32];
     sm4KeyExpand(SM4_TEST_KEY, rk);
 
-    /* 1. Correctness check */
     if (!verifyCorrectness()) return 1;
 
-    /* 2. Quick performance test */
-    size_t data_size = 1024 * 1024;   /* 1 MB */
+    size_t data_size = 1024 * 1024;
     int    repeat    = 10;
 
-    uint64_t elapsed = bench_default_encrypt(rk, data_size, repeat);
-    double total_bytes = (double)data_size * repeat;
-    double throughput  = total_bytes / ((double)elapsed / 1e6) / (1024.0 * 1024.0);
+    uint64_t elapsed = bench_zbb_encrypt(rk, data_size, repeat);
+    double throughput = (double)(data_size * repeat)
+                      / ((double)elapsed / 1e6)
+                      / (1024.0 * 1024.0);
 
-    printf("SM4 Default Loop — %zu bytes × %d repeats\n", data_size, repeat);
+    printf("SM4 Default Loop + Zbb — %zu bytes × %d repeats\n", data_size, repeat);
     printf("  Elapsed  : %lu μs\n", elapsed);
     printf("  Throughput: %.3f MB/s\n", throughput);
 
