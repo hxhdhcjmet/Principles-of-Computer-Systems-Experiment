@@ -1,0 +1,41 @@
+
+Scheme Descriptions:
+  [1] default_loop     — 32-round for-loop (baseline)
+  [2] unrolled         — 32-round full unrolling
+  [3] reduced_dep      — Reduced XOR dependency chain
+  [4] xbox             — T-box lookup (1 KB table, runtime rotations)
+  [5] xbox_merged      — 4 merged T-box tables (4 KB, zero runtime shifts)
+  [6] zbb_default      — 32-round for-loop + Zbb ISA (rev8/rori)
+  [7] zbb_xbox         — 4 merged T-box + Zbb ISA (max optimization)
+SM4 Performance Benchmark Results
+=================================
+
+
+Throughput Comparison (MB/s):
+Scheme           |     1 KB |    16 KB |    64 KB |   256 KB |     1 MB |     4 MB |    16 MB
+default_loop     |   21.750 |   21.915 |   21.902 |   21.892 |   21.770 |   21.559 |   21.256
+unrolled         |   24.706 |   24.712 |   24.682 |   24.626 |   24.429 |   24.133 |   23.729
+reduced_dep      |   21.926 |   21.978 |   21.956 |   21.890 |   21.773 |   21.544 |   21.239
+xbox             |   28.367 |   28.188 |   28.123 |   28.023 |   27.737 |   27.302 |   26.635
+xbox_merged      |   36.374 |   36.196 |   36.115 |   35.726 |   35.078 |   33.985 |   32.431
+zbb_default      |   24.955 |   24.790 |   24.786 |   24.705 |   24.529 |   24.232 |   23.819
+zbb_xbox         |   36.005 |   35.765 |   35.709 |   35.203 |   34.435 |   33.502 |   31.968
+
+Speedup Ratio (× vs baseline):
+Scheme           |     1 KB |    16 KB |    64 KB |   256 KB |     1 MB |     4 MB |    16 MB
+default_loop     |  1.0000× |  1.0000× |  1.0000× |  1.0000× |  1.0000× |  1.0000× |  1.0000×
+unrolled         |  1.1359× |  1.1276× |  1.1270× |  1.1249× |  1.1222× |  1.1194× |  1.1163×
+reduced_dep      |  1.0081× |  1.0029× |  1.0025× |  0.9999× |  1.0001× |  0.9993× |  0.9992×
+xbox             |  1.3042× |  1.2863× |  1.2840× |  1.2801× |  1.2741× |  1.2664× |  1.2531×
+xbox_merged      |  1.6724× |  1.6517× |  1.6490× |  1.6319× |  1.6113× |  1.5764× |  1.5258×
+zbb_default      |  1.1473× |  1.1312× |  1.1317× |  1.1285× |  1.1267× |  1.1240× |  1.1206×
+zbb_xbox         |  1.6554× |  1.6320× |  1.6304× |  1.6081× |  1.5818× |  1.5540× |  1.5039×
+
+Average Speedup (geometric mean):
+  default_loop     : 1.0000×
+  unrolled         : 1.1247×
+  reduced_dep      : 1.0017×
+  xbox             : 1.2782×
+  xbox_merged      : 1.6162×
+  zbb_default      : 1.1300×
+  zbb_xbox         : 1.5943×
