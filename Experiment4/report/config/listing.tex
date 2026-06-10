@@ -180,7 +180,7 @@
     numbers=left,
     stepnumber=1,
     numbersep=8pt,
-    backgroundcolor=\color{codebg},
+    % backgroundcolor=\color{codebg},
     frame=single,
     framerule=0.6pt,
     rulecolor=\color{coderule!40},
@@ -210,7 +210,7 @@
     numbers=left,
     stepnumber=1,
     numbersep=8pt,
-    backgroundcolor=\color{codebg},
+    % backgroundcolor=\color{codebg},
     frame=single,
     framerule=0.6pt,
     rulecolor=\color{coderule!40},
@@ -255,3 +255,6 @@
     showstringspaces=false,
     style=cstyle
 }
+
+% ================== 去除代码块 "Listing" 前缀 ==================
+\renewcommand{\lstlistingname}{}
