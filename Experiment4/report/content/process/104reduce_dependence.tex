@@ -2,8 +2,8 @@
 在默认循环实现版本中每轮循环都有\texttt{tmp = X1 \^ X2 \^ X3 \^ rk[i]},由于异或操作满足结合律:
 \[ a \oplus b \oplus c \oplus d = (a\oplus b) \oplus (c \oplus d)  \]
 因此这里可以分别计算前前两个变量的异或结果和后两个变量的异或结果,分别存到临时变量中,最后将这两个临时变量再求异或,这样能减少指令之间的依赖性,即可以同时求两个临时变量。否则,连续异或时想要求后一个异或必须要等前一个异或运算结束,指令依赖关系导致只能串行执行。
-在SM4每轮最后的换位赋值时可能产生写寄存器又马上读的依赖,因此可以用临时变量存放$X_1、X_2$的值,这样能确保整个过程只发生寄存器移动而无需内存访问。具体代码如下:
-\begin{lstlisting}
+在SM4每轮最后的换位赋值时可能产生写寄存器又马上读的依赖,因此可以用临时变量存放$X_1,X_2$值,这样能确保整个过程只发生寄存器移动而无需内存访问。具体代码如下:
+\begin{lstlisting}[title={openhitls/testcode/demo/sm4\_reduced\_dep.c}]
 static void sm4EncryptBlock(const uint32_t rk[32],
                             const uint8_t in[16],
                             uint8_t out[16])

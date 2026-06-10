@@ -1,1 +1,77 @@
 \section{实验结果分析}
+
+\subsection{整体性能对比}
+根据表\ref{tab:speedup}中加速比计算各方案在所有数据规模下的几何平均加速比,结果如下:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width = 1\textwidth]{figure/speedup_avg.png}
+    \caption{各优化方案在所有数据规模下的几何平均加速比}
+    \label{fig:speedup_avg}
+\end{figure}
+
+从图\ref{fig:speedup_avg}可以看出,7种方案按照性能提升从低到高排序为:
+\[
+\text{reduced\_dep} \;(\approx 1.00\times) \;<\; \text{unrolled} \;(\approx 1.12\times) \;<\; \text{zbb\_default} \;(\approx 1.13\times) \;<\; \text{xbox} \;(\approx 1.28\times) \;<\; \text{zbb\_xbox} \;(\approx 1.59\times) \;<\; \text{xbox\_merged} \;(\approx 1.61\times)
+\]
+其中,\texttt{xbox\_merged}方案取得了最优的加速效果(几何平均加速比约1.61$\times$),而\texttt{reduced\_dep}方案几乎没有性能提升。
+
+\subsection{查表优化的压倒性优势}
+实验数据表明,基于预计算查表的优化方案(\texttt{xbox}与\texttt{xbox\_merged})是提升SM4加密性能最有效的手段。
+
+\texttt{xbox}方案的核心思想是将每轮迭代中需计算的$T = L \circ S$函数预计算为一张256项的查找表。原始实现中,每轮需执行1次S盒查表、4次循环左移和4次异或,共9条算术指令;而\texttt{xbox}方案将T函数的32轮中每轮操作合并为4次查表和4次异或,大幅缩减了指令数量。实验结果显示该方案取得了约1.28$\times$的加速比。
+
+\texttt{xbox\_merged}方案在此基础上进一步优化:将4张分别按移位偏移$(0,2,10,18,24)$索引的256项预计算表合并,每张表实际占用1 KB。这种方法将每轮的4次查表+4次异或进一步压缩为4次查表+3次异或(合并了部分移位),同时减少了对四个独立$X_i$变量的存储需求,优化了寄存器分配。
+实验结果显示该方案取得了所有方法中最高的加速比(约1.61$\times$),说明SM4加密算法的主要性能瓶颈在于每轮T函数中的大量移位与循环移位运算,而通过空间换时间的预计算查表策略能够从根本上消除这一瓶颈。
+
+\subsection{微架构优化的有限效果}
+
+\subsubsection{循环展开(unrolled)}
+\texttt{unrolled}方案通过将SM4的32轮迭代在编译时展开为32段顺序代码,消除了循环分支预测开销和循环计数器的自增/比较指令。实验结果显示加速比约为1.12$\times$,效果有限。分析原因在于:
+\begin{itemize}
+    \item SM4的内层循环体本身比较简单,循环开销占比低,展开带来的绝对收益有限;
+    \item RISC-V 8核处理器拥有较大的L1指令缓存(每核心32 KiB),展开后代码体积增大但未超出缓存容量,因此无指令缓存缺失惩罚,但也无法在缓存层面进一步获益。
+\end{itemize}
+
+\subsubsection{降低指令依赖(reduced\_dep)}
+\texttt{reduced\_dep}方案尝试通过重排异或操作来打破原始实现中$X_i$变量之间的依赖链,期望更充分利用处理器的指令级并行能力。然而实验结果显示加速比接近1.00$\times$(甚至在某些大数据规模下略低于基准),几乎完全没有效果。对此的解释是:
+\begin{itemize}
+    \item Ky(R) X1处理器为顺序发射的RISC-V核心,指令级并行能力有限,打破依赖链不能有效提升每周期指令发射数;
+    \item SM4轮函数中的关键路径是S盒查表和T函数的线性变换,异或操作的依赖链并非性能瓶颈,打破这部分依赖无助于缩短关键路径;
+    \item 变量重排可能干扰了编译器的寄存器分配策略,反而在部分场景下产生了轻微的负优化效果(大块数据下$<1.00\times$)。
+\end{itemize}
+
+\subsection{ISA扩展的独立与叠加效应}
+RISC-V Zbb位操作扩展提供了两条对SM4优化有益的指令:
+\begin{itemize}
+    \item \texttt{rev8}:单指令完成32位字的字节序反转,替代原始\texttt{sm4LoadBlock}中的4次\texttt{lbu+ slli + or}序列;
+    \item \texttt{rori}:单指令完成一次循环右移,替代原始L变换中每个循环移位所需的2条移位+1条或指令。
+\end{itemize}
+
+实验数据显示:
+\begin{itemize}
+    \item \textbf{独立应用Zbb扩展}: \texttt{zbb\_default}方案相对于\texttt{default\_loop}取得约1.13$\times$的加速比,与\texttt{unrolled}相当,说明单纯替换几条位操作指令对整体性能提升有限;
+    \item \textbf{叠加应用Zbb扩展}: \texttt{zbb\_xbox}方案($\approx 1.59\times$)虽然较\texttt{zbb\_default}提升显著,但仍低于\texttt{xbox\_merged}($\approx 1.61\times$)。这是因为Zbb优化的\texttt{rev8}、\texttt{rori}指令主要加速字节序转换和循环移位操作,而\texttt{xbox\_merged}已经将这些操作转移到编译时完成,运行时仅剩查表和异或,因此Zbb扩展在查表优化方案中的边际收益很小。
+\end{itemize}
+
+\subsection{数据规模对加速比的影响}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width = 1\textwidth]{figure/speedup_lines.png}
+    \caption{各方案加速比随数据规模变化的趋势}
+    \label{fig:speedup_trend}
+\end{figure}
+
+从图\ref{fig:speedup_trend}和表\ref{tab:throughput}可以观察到两个趋势:
+\begin{enumerate}
+    \item \textbf{吞吐率随数据规模增大而轻微下降}:以基准方案为例,吞吐率从1 KB时的21.985 MB/s缓慢下降到16 MB时的21.239 MB/s(降幅约3.4\%)。这一趋势在所有方案中均存在,原因在于数据规模增大后Cache命中率下降,L2缓存容量(每4核心共享512 KiB)相对有限,大块数据处理时访存瓶颈逐渐显现。
+    \item \textbf{加速比随数据规模增大而轻微递减}:所有方案的加速比在大数据规模下均出现小幅衰减。例如\texttt{xbox\_merged}从1 KB时的1.654$\times$下降到16 MB时的1.525$\times$。这说明查表优化方案的优势部分依赖于L1数据缓存的高命中率;当数据量超过L1/L2缓存容量时,表查找的频率不变但数据的加载存储开销增大,稀释了查表优化的相对优势。
+\end{enumerate}
+
+\subsection{小结与建议}
+综合以上分析,可以得出以下结论:
+\begin{enumerate}
+    \item 预计算查表(空间换时间)是优化SM4加密算法在RISC-V平台上最有效的手段,\texttt{xbox\_merged}方案可取得约1.61$\times$的加速;
+    \item 单纯的指令级优化(循环展开、降低依赖)和ISA扩展(Zbb)对性能提升有限(均不超过1.13$\times$),SM4的性能瓶颈在于算法的计算结构本身而非指令编码效率;
+    \item 不同优化方案的叠加并非总能产生$1+1>2$的效果,如Zbb扩展在查表方案中的边际收益极小,实际工程中应优先选择效果最显著的单一优化手段;
+    \item 在资源受限的嵌入式RISC-V平台上,4 KB的预计算表空间代价完全可以接受,建议在工程实践中采用\texttt{xbox\_merged}方案。
+\end{enumerate}

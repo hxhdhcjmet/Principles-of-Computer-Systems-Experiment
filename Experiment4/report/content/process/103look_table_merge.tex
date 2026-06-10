@@ -19,7 +19,7 @@
 
 \subsubsection{SM4默认XBox查表}
 因此预计算$Xbox[i] = L(S(i))$共$2^8 = 256$项,最后循环移位并异或即可得到最终结果。关键代码如下:
-\begin{lstlisting}
+\begin{lstlisting}[title={openhitls/testcode/demo/sm4\_xbox.c}]
 static void sm4EncryptBlock(const uint32_t rk[32],
                             const uint8_t in[16],
                             uint8_t out[16])
@@ -57,7 +57,7 @@ static void sm4EncryptBlock(const uint32_t rk[32],
 编译运行结果截图如下:
 \begin{figure}[H]
     \centering
-    \includegraphics[width = 1\textwidth]{figure/sm4_xbox}
+    \includegraphics[width = 1\textwidth]{figure/sm4_xbox.png}
     \caption{SM4默认XBox}
 \end{figure}
 效率较SM4默认循环和循环展开都有所提升,不过这种提前计算会增大程序的空间复杂度。
@@ -83,7 +83,7 @@ static void sm4EncryptBlock(const uint32_t rk[32],
 \end{cases}
 \]
 关键代码如下:
-\begin{lstlisting}
+\begin{lstlisting}[title={openhitls/testcode/demo/sm4\_xbox\_merged.c}]
 static uint32_t XBOX0[256];
 static uint32_t XBOX1[256];
 static uint32_t XBOX2[256];
@@ -141,7 +141,7 @@ static void sm4EncryptBlock(const uint32_t rk[32],
 编译运行后结果如下:
 \begin{figure}[H]
     \centering
-    \includegraphics[width = 1\textwidth]{figure/sm4_xbox_merge}
+    \includegraphics[width = 1\textwidth]{figure/sm4_xbox_merge.png}
     \caption{SM4XBox合并}
 \end{figure}
 可以看到程序运行效率和吞吐量相较之前版本优化得到很大提升,但因为需要预计算和存储4张表,因此有总计$4 * 256 * 4B = 4KB$的额外空间开销。

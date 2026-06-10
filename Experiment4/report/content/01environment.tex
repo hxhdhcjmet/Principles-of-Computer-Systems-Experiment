@@ -1,14 +1,42 @@
 \section{实验环境}
 
+\subsection{开发板硬件环境}
 \begin{itemize}
-% orange pi环境(待补充)
-    \item 主机硬件环境
+    \item 开发板型号:Orange Pi RV2
+    \item 处理器:Ky(R) X1(RISC-V 64位)
+    \begin{itemize}
+        \item 架构:riscv64(Little Endian)
+        \item ISA扩展:rv64imafdcv\_zicsr\_zifencei\_zihintpause\_zba\_zbb\_zbc\_zbs\_zicbop\_zicboz
+        \item 处理器核心:8核(1 Socket × 8 Cores)
+        \item 每核心线程数:1
+        \item CPU频率范围:614.4 MHz（最低）— 1600.0 MHz（最高）
+    \end{itemize}
+    \item 缓存:
+    \begin{itemize}
+        \item L1d Cache:256 KiB(8实例,即每核心32 KiB)
+        \item L1i Cache:256 KiB(8实例,即每核心32 KiB)
+        \item L2 Cache:1 MiB(2实例,即每4核心共享512 KiB)
+    \end{itemize}
+    \item 内存:7.7 GiB(无Swap)
+\end{itemize}
+
+\subsection{开发板软件环境}
+\begin{itemize}
+    \item 操作系统:Ubuntu 24.04
+    \item 交叉编译器:riscv64-linux-gnu-gcc / g++ 13.3.0
+    \item 构建工具:CMake 3.28.3、GNU Make 4.3
+    \item OpenHiTLS:（待补充版本/commit）
+    \item libboundscheck:（待补充版本）
+\end{itemize}
+
+\subsection{主机环境}
+\begin{itemize}
+    \item 主机硬件
     \begin{itemize}
         \item 处理器:13th Gen Intel(R) Core(TM) i5-13420H
         \item 内存:16 GB
     \end{itemize}
-
-    \item 主机软件环境
+    \item 主机软件
     \begin{itemize}
         \item CP210x Windows Drivers(USB转TTL串口芯片驱动)
         \item MobaXterm(终端管理工具)
