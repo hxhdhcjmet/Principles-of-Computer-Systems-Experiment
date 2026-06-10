@@ -1,0 +1,11 @@
+SM4 Benchmark Final Summary
+===========================================================================
+Scheme           Run Count    Mean Speedup        Min        Max
+---------------------------------------------------------------------------
+default_loop             4         1.0000x    1.0000x    1.0000x
+unrolled                 4         1.1244x    1.1238x    1.1250x
+reduced_dep              4         1.0015x    1.0008x    1.0022x
+xbox                     4         1.2761x    1.2710x    1.2782x
+xbox_merged              4         1.6137x    1.6092x    1.6171x
+zbb_default              4         1.1296x    1.1287x    1.1300x
+zbb_xbox                 4         1.5937x    1.5924x    1.5947x
