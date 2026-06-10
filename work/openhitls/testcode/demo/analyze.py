@@ -576,3 +576,6 @@ def main():
     print(f"All plots saved to: {os.path.abspath(args.outdir)}/")
     print(f"Total figures: {len(os.listdir(args.outdir))}")
     print(f"Done.")
+
+
+main()
