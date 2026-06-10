@@ -1,54 +1,257 @@
-\lstset{
-    basicstyle=\ttfamily\small,
-    keywordstyle=\color{blue},
-    commentstyle=\color{gray},
-    breaklines=true,
-    frame=single,
-    showstringspaces=false
-}
+% \lstset{
+%     basicstyle=\ttfamily\small,
+%     keywordstyle=\color{blue},
+%     commentstyle=\color{gray},
+%     breaklines=true,
+%     frame=single,
+%     showstringspaces=false
+% }
+% \definecolor{vscodeblue}{RGB}{86,156,214}
+% \definecolor{vscodegreen}{RGB}{106,153,85}
+% \definecolor{vscodered}{RGB}{214,157,133}
+% \definecolor{vscodegray}{RGB}{128,128,128}
+
+% \lstdefinestyle{vscode}{
+% language=C,
+% basicstyle=\ttfamily\small,
+% keywordstyle=\color{vscodeblue},
+% stringstyle=\color{vscodered},
+% commentstyle=\color{vscodegreen},
+% numbers=left,
+% numberstyle=\scriptsize\color{vscodegray},
+% stepnumber=1,
+% numbersep=10pt,
+% showstringspaces=false,
+% showspaces=false,
+% showtabs=false,
+% breaklines=true,
+% breakatwhitespace=false,
+% tabsize=4,
+% keepspaces=true,
+% frame=none,
+% columns=fullflexible,
+% xleftmargin=12pt,
+% xrightmargin=12pt,
+% framexleftmargin=10pt,
+% framexrightmargin=10pt,
+% framextopmargin=5pt,
+% framexbottommargin=5pt,
+% aboveskip=1em,
+% belowskip=1em
+% }
+% % 定义 Bash 样式
+% \lstdefinestyle{Bash}{
+%     language=bash,                % 设置语言
+%     basicstyle=\ttfamily\small,   % 基础字体样式
+%     keywordstyle=\color{blue},    % 关键字颜色
+%     commentstyle=\color{gray},    % 注释颜色
+%     stringstyle=\color{red},      % 字符串颜色
+%     numbers=left,                 % 行号在左
+%     numberstyle=\tiny\color{gray},% 行号样式
+%     frame=single,                 % 边框
+%     breaklines=true,              % 自动换行
+%     showstringspaces=false        % 不显示字符串中的空格
+% }
+% !TeX program = xelatex
+% lstlisting.tex — 代码块配置（增强 C 与 RISC‑V 汇编支持）
+% 依赖：listings 宏包，建议配合 xcolor 使用。
+
+% ================== 颜色定义 ==================
+% 与 format.tex 中的 macblue 等协调；若已定义则跳过
+\providecolor{macblue}{RGB}{0, 122, 255}
+\providecolor{bglight}{RGB}{245, 245, 247}
+\providecolor{darkgray}{RGB}{51, 51, 51}
+\providecolor{warningred}{RGB}{255, 59, 48}
+
+% 高亮专用颜色
+\definecolor{codekeyword}{RGB}{0,122,255}      % 关键字蓝（同 macblue）
+\definecolor{codestring}{RGB}{163,21,21}       % 字符串红
+\definecolor{codecomment}{RGB}{0,128,0}        % 注释绿
+\definecolor{codenumber}{RGB}{128,128,128}     % 行号灰
+\definecolor{codebg}{RGB}{250,250,250}         % 背景浅灰
+\definecolor{coderule}{RGB}{0,122,255}         % 边框线颜色
+
+% VSCode 风格颜色（保留）
 \definecolor{vscodeblue}{RGB}{86,156,214}
 \definecolor{vscodegreen}{RGB}{106,153,85}
 \definecolor{vscodered}{RGB}{214,157,133}
 \definecolor{vscodegray}{RGB}{128,128,128}
 
+% ================== 原有样式（保留） ==================
 \lstdefinestyle{vscode}{
-language=C,
-basicstyle=\ttfamily\small,
-keywordstyle=\color{vscodeblue},
-stringstyle=\color{vscodered},
-commentstyle=\color{vscodegreen},
-numbers=left,
-numberstyle=\scriptsize\color{vscodegray},
-stepnumber=1,
-numbersep=10pt,
-showstringspaces=false,
-showspaces=false,
-showtabs=false,
-breaklines=true,
-breakatwhitespace=false,
-tabsize=4,
-keepspaces=true,
-frame=none,
-columns=fullflexible,
-xleftmargin=12pt,
-xrightmargin=12pt,
-framexleftmargin=10pt,
-framexrightmargin=10pt,
-framextopmargin=5pt,
-framexbottommargin=5pt,
-aboveskip=1em,
-belowskip=1em
+    language=C,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{vscodeblue},
+    stringstyle=\color{vscodered},
+    commentstyle=\color{vscodegreen},
+    numbers=left,
+    numberstyle=\scriptsize\color{vscodegray},
+    stepnumber=1,
+    numbersep=10pt,
+    showstringspaces=false,
+    showspaces=false,
+    showtabs=false,
+    breaklines=true,
+    breakatwhitespace=false,
+    tabsize=4,
+    keepspaces=true,
+    frame=none,
+    columns=fullflexible,
+    xleftmargin=12pt,
+    xrightmargin=12pt,
+    framexleftmargin=10pt,
+    framexrightmargin=10pt,
+    framextopmargin=5pt,
+    framexbottommargin=5pt,
+    aboveskip=1em,
+    belowskip=1em,
 }
-% 定义 Bash 样式
+
 \lstdefinestyle{Bash}{
-    language=bash,                % 设置语言
-    basicstyle=\ttfamily\small,   % 基础字体样式
-    keywordstyle=\color{blue},    % 关键字颜色
-    commentstyle=\color{gray},    % 注释颜色
-    stringstyle=\color{red},      % 字符串颜色
-    numbers=left,                 % 行号在左
-    numberstyle=\tiny\color{gray},% 行号样式
-    frame=single,                 % 边框
-    breaklines=true,              % 自动换行
-    showstringspaces=false        % 不显示字符串中的空格
+    language=bash,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single,
+    breaklines=true,
+    showstringspaces=false,
+}
+
+% ================== RISC‑V 汇编语言定义 ==================
+\lstdefinelanguage{RISCV}{
+    % 基本指令集（RV32I / RV64I）
+    morekeywords={
+        add, addi, sub, and, or, xor, sll, srl, sra,
+        slt, sltu, slti, sltiu,
+        lb, lh, lw, ld, sb, sh, sw, sd,
+        lui, auipc,
+        jal, jalr,
+        beq, bne, blt, bge, bltu, bgeu,
+        ecall, ebreak,
+        fence, fence.i,
+        csrrw, csrrs, csrrc, csrrwi, csrrsi, csrrci
+    },
+    % M 扩展（乘除）
+    morekeywords=[2]{
+        mul, mulh, mulhsu, mulhu,
+        div, divu, rem, remu
+    },
+    % F/D 扩展（浮点）与 V 扩展（向量）示例
+    morekeywords=[3]{
+        flw, fsw, fadd.s, fsub.s, fmul.s, fdiv.s, fsqrt.s,
+        fmadd.s, fmsub.s, fnmadd.s, fnmsub.s,
+        vadd.vv, vadd.vx, vsub.vv, vmul.vv, vfmul.vv
+    },
+    % 伪指令
+    morekeywords=[4]{
+        li, la, mv, call, ret, j, jr, nop, tail, not, neg
+    },
+    keywordstyle=[1]\color{codekeyword}\bfseries,
+    keywordstyle=[2]\color{codekeyword!80!black},
+    keywordstyle=[3]\color{vscodeblue!90!black},
+    keywordstyle=[4]\color{codekeyword!70!black},
+    sensitive=true,
+    morecomment=[l]{\#},
+    morecomment=[l]{//},
+    morestring=[b]",
+    morestring=[b]',
+    % 寄存器强调
+    emph={
+        x0, zero, ra, sp, gp, tp,
+        t0, t1, t2, t3, t4, t5, t6,
+        s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11,
+        a0, a1, a2, a3, a4, a5, a6, a7
+    },
+    emphstyle=\color{vscodeblue!70!black}\mdseries,
+    alsoletter={.},
+}
+
+% ================== 新样式：C 语言（mac 风格） ==================
+\lstdefinestyle{cstyle}{
+    language=C,
+    basicstyle=\ttfamily\small\color{darkgray},
+    keywordstyle=\color{codekeyword}\bfseries,
+    commentstyle=\color{codecomment}\itshape,
+    stringstyle=\color{codestring},
+    numberstyle=\tiny\color{codenumber},
+    numbers=left,
+    stepnumber=1,
+    numbersep=8pt,
+    backgroundcolor=\color{codebg},
+    frame=single,
+    framerule=0.6pt,
+    rulecolor=\color{coderule!40},
+    framesep=6pt,
+    breaklines=true,
+    breakatwhitespace=false,
+    showstringspaces=false,
+    showspaces=false,
+    showtabs=false,
+    tabsize=4,
+    keepspaces=true,
+    columns=fullflexible,
+    xleftmargin=2.2em,
+    framexleftmargin=1em,
+    aboveskip=1em,
+    belowskip=1em,
+}
+
+% ================== 新样式：RISC‑V 汇编（mac 风格） ==================
+\lstdefinestyle{asmstyle}{
+    language=RISCV,
+    basicstyle=\ttfamily\small\color{darkgray},
+    keywordstyle=\color{codekeyword}\bfseries,
+    commentstyle=\color{codecomment}\itshape,
+    stringstyle=\color{codestring},
+    numberstyle=\tiny\color{codenumber},
+    numbers=left,
+    stepnumber=1,
+    numbersep=8pt,
+    backgroundcolor=\color{codebg},
+    frame=single,
+    framerule=0.6pt,
+    rulecolor=\color{coderule!40},
+    framesep=6pt,
+    breaklines=true,
+    breakatwhitespace=false,
+    showstringspaces=false,
+    showspaces=false,
+    showtabs=false,
+    tabsize=8,
+    keepspaces=true,
+    columns=fullflexible,
+    xleftmargin=2.2em,
+    framexleftmargin=1em,
+    aboveskip=1em,
+    belowskip=1em,
+}
+
+% ================== 便捷命令与环境 ==================
+% 插入外部 C 文件（可选样式参数）
+\newcommand{\cfile}[2][]{\lstinputlisting[style=cstyle,#1]{#2}}
+
+% 插入外部 RISC‑V 汇编文件（可选样式参数）
+\newcommand{\asmfile}[2][]{\lstinputlisting[style=asmstyle,#1]{#2}}
+
+% 内嵌 C 代码块环境
+\lstnewenvironment{ccode}[1][]
+  {\lstset{style=cstyle,#1}}
+  {}
+
+% 内嵌汇编代码块环境
+\lstnewenvironment{asmcode}[1][]
+  {\lstset{style=asmstyle,#1}}
+  {}
+
+% ================== 默认全局设置 ==================
+% 可根据需要注释或覆盖；这里将默认风格设为 cstyle
+\lstset{
+    basicstyle=\ttfamily\small,
+    frame=single,
+    breaklines=true,
+    showstringspaces=false,
+    style=cstyle
 }
