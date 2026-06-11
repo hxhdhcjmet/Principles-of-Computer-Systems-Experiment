@@ -175,7 +175,6 @@ static const uint32_t XBOX_3[] = {
     0x9d78e5e5, 0x56edbbbb, 0x235e7d7d, 0xc63ef8f8, 0x8bd45f5f, 0xe7c82f2f, 0xdd39e4e4, 0x68492121,
 };
 
-
 /**
  * TE(a,b,c,d) = LE(SBOX[a],SBOX[b],SBOX[c],SBOX[d])
  *             = LE(SBOX[a],0,0,0)⊕LE(0,SBOX[b],0,0)⊕LE(0,0,SBOX[c],0)⊕LE(0,0,0,SBOX[d])
@@ -186,37 +185,72 @@ static const uint32_t XBOX_3[] = {
  *             = XBOX_3[a]⊕XBOX_2[b]⊕XBOX_1[c]⊕XBOX_0[d]
  * F(Xi,Xi+1,Xi+2,Xi+3,rki) = Xi⊕TE(Xi+1⊕Xi+2⊕Xi+3⊕rki)
  */
-#define CRYPT_SM4_ROUND(t, x0, x1, x2, x3, rk, sbox)   \
-    do {                                     \
-        (t) = (x1) ^ (x2) ^ (x3) ^ (rk);     \
-        (x0) ^= (sbox##_3)[((t) >> 24) & 0xff] ^(sbox##_2)[((t) >> 16) & 0xff] ^   \
-                (sbox##_1)[((t) >> 8) & 0xff] ^ (sbox##_0)[(t) & 0xff];    \
+#define CRYPT_SM4_ROUND(t, x0, x1, x2, x3, rk)          \
+    do {                                                \
+        uint32_t t1 = (x1) ^ (x2);                      \
+        uint32_t t2 = (x3) ^ (rk);                      \
+        uint32_t te;                                    \
+        (t) = t1 ^ t2;                                  \
+        te = XBOX_3[((t) >> 24) & 0xff]                 \
+           ^ XBOX_2[((t) >> 16) & 0xff]                 \
+           ^ XBOX_1[((t) >> 8) & 0xff]                  \
+           ^ XBOX_0[(t) & 0xff];                        \
+        (x0) ^= te;                                     \
     } while (0)
-
  /* X(i+4) = F(Xi Xi+1 Xi+2 Xi+3 rk[i]),i = 0,1,...,31; */
-#define ENC_ROUND_FUNCTION(t, x0, x1, x2, x3, roundKey, sbox)           \
-    for (int i = 0; i < 32; i += 8) {                                   \
-        CRYPT_SM4_ROUND((t), (x0), (x1), (x2), (x3), (roundKey)[(i) + 0], sbox);  \
-        CRYPT_SM4_ROUND((t), (x1), (x2), (x3), (x0), (roundKey)[(i) + 1], sbox);  \
-        CRYPT_SM4_ROUND((t), (x2), (x3), (x0), (x1), (roundKey)[(i) + 2], sbox);  \
-        CRYPT_SM4_ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[(i) + 3], sbox);  \
-        CRYPT_SM4_ROUND((t), (x0), (x1), (x2), (x3), (roundKey)[(i) + 4], sbox);  \
-        CRYPT_SM4_ROUND((t), (x1), (x2), (x3), (x0), (roundKey)[(i) + 5], sbox);  \
-        CRYPT_SM4_ROUND((t), (x2), (x3), (x0), (x1), (roundKey)[(i) + 6], sbox);  \
-        CRYPT_SM4_ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[(i) + 7], sbox);  \
-    }
-
+#define ENC_ROUND_FUNCTION(t, x0, x1, x2, x3, roundKey)                     \
+    do {                                                                    \
+        CRYPT_SM4_ROUND((t), (x0), (x1), (x2), (x3), (roundKey)[0]);         \
+        CRYPT_SM4_ROUND((t), (x1), (x2), (x3), (x0), (roundKey)[1]);         \
+        CRYPT_SM4_ROUND((t), (x2), (x3), (x0), (x1), (roundKey)[2]);         \
+        CRYPT_SM4_ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[3]);         \
+                                                                            \
+        CRYPT_SM4_ROUND((t), (x0), (x1), (x2), (x3), (roundKey)[4]);         \
+        CRYPT_SM4_ROUND((t), (x1), (x2), (x3), (x0), (roundKey)[5]);         \
+        CRYPT_SM4_ROUND((t), (x2), (x3), (x0), (x1), (roundKey)[6]);         \
+        CRYPT_SM4_ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[7]);         \
+                                                                            \
+        CRYPT_SM4_ROUND((t), (x0), (x1), (x2), (x3), (roundKey)[8]);         \
+        CRYPT_SM4_ROUND((t), (x1), (x2), (x3), (x0), (roundKey)[9]);         \
+        CRYPT_SM4_ROUND((t), (x2), (x3), (x0), (x1), (roundKey)[10]);        \
+        CRYPT_SM4_ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[11]);        \
+                                                                            \
+        CRYPT_SM4_ROUND((t), (x0), (x1), (x2), (x3), (roundKey)[12]);        \
+        CRYPT_SM4_ROUND((t), (x1), (x2), (x3), (x0), (roundKey)[13]);        \
+        CRYPT_SM4_ROUND((t), (x2), (x3), (x0), (x1), (roundKey)[14]);        \
+        CRYPT_SM4_ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[15]);        \
+                                                                            \
+        CRYPT_SM4_ROUND((t), (x0), (x1), (x2), (x3), (roundKey)[16]);        \
+        CRYPT_SM4_ROUND((t), (x1), (x2), (x3), (x0), (roundKey)[17]);        \
+        CRYPT_SM4_ROUND((t), (x2), (x3), (x0), (x1), (roundKey)[18]);        \
+        CRYPT_SM4_ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[19]);        \
+                                                                            \
+        CRYPT_SM4_ROUND((t), (x0), (x1), (x2), (x3), (roundKey)[20]);        \
+        CRYPT_SM4_ROUND((t), (x1), (x2), (x3), (x0), (roundKey)[21]);        \
+        CRYPT_SM4_ROUND((t), (x2), (x3), (x0), (x1), (roundKey)[22]);        \
+        CRYPT_SM4_ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[23]);        \
+                                                                            \
+        CRYPT_SM4_ROUND((t), (x0), (x1), (x2), (x3), (roundKey)[24]);        \
+        CRYPT_SM4_ROUND((t), (x1), (x2), (x3), (x0), (roundKey)[25]);        \
+        CRYPT_SM4_ROUND((t), (x2), (x3), (x0), (x1), (roundKey)[26]);        \
+        CRYPT_SM4_ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[27]);        \
+                                                                            \
+        CRYPT_SM4_ROUND((t), (x0), (x1), (x2), (x3), (roundKey)[28]);        \
+        CRYPT_SM4_ROUND((t), (x1), (x2), (x3), (x0), (roundKey)[29]);        \
+        CRYPT_SM4_ROUND((t), (x2), (x3), (x0), (x1), (roundKey)[30]);        \
+        CRYPT_SM4_ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[31]);        \
+    } while (0)
 /* X(i+4) = F(Xi Xi+1 Xi+2 Xi+3 rk[31 - i]),i = 0,1,...,31; */
-#define DEC_ROUND_FUNCTION(t, x0, x1, x2, x3, roundKey, sbox)           \
+#define DEC_ROUND_FUNCTION(t, x0, x1, x2, x3, roundKey)           \
     for (int i = 32; i > 0; i -= 8) {                                   \
-        CRYPT_SM4_ROUND((t), (x0), (x1), (x2), (x3), (roundKey)[(i) - 1], sbox);  \
-        CRYPT_SM4_ROUND((t), (x1), (x2), (x3), (x0), (roundKey)[(i) - 2], sbox);  \
-        CRYPT_SM4_ROUND((t), (x2), (x3), (x0), (x1), (roundKey)[(i) - 3], sbox);  \
-        CRYPT_SM4_ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[(i) - 4], sbox);  \
-        CRYPT_SM4_ROUND((t), (x0), (x1), (x2), (x3), (roundKey)[(i) - 5], sbox);  \
-        CRYPT_SM4_ROUND((t), (x1), (x2), (x3), (x0), (roundKey)[(i) - 6], sbox);  \
-        CRYPT_SM4_ROUND((t), (x2), (x3), (x0), (x1), (roundKey)[(i) - 7], sbox);  \
-        CRYPT_SM4_ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[(i) - 8], sbox);  \
+        CRYPT_SM4_ROUND((t), (x0), (x1), (x2), (x3), (roundKey)[(i) - 1]);  \
+        CRYPT_SM4_ROUND((t), (x1), (x2), (x3), (x0), (roundKey)[(i) - 2]);  \
+        CRYPT_SM4_ROUND((t), (x2), (x3), (x0), (x1), (roundKey)[(i) - 3]);  \
+        CRYPT_SM4_ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[(i) - 4]);  \
+        CRYPT_SM4_ROUND((t), (x0), (x1), (x2), (x3), (roundKey)[(i) - 5]);  \
+        CRYPT_SM4_ROUND((t), (x1), (x2), (x3), (x0), (roundKey)[(i) - 6]);  \
+        CRYPT_SM4_ROUND((t), (x2), (x3), (x0), (x1), (roundKey)[(i) - 7]);  \
+        CRYPT_SM4_ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[(i) - 8]);  \
     }
     
 
@@ -230,10 +264,10 @@ static void SM4_Crypt(uint8_t* out, const uint8_t* in, const uint32_t* rk, uint3
 
     /* Round function */
     if (enc) {
-        ENC_ROUND_FUNCTION(x[4], x[0], x[1], x[2], x[3], rk, XBOX);  // Encryption
+        ENC_ROUND_FUNCTION(x[4], x[0], x[1], x[2], x[3], rk);  // Encryption
     }
     else {
-        DEC_ROUND_FUNCTION(x[4], x[0], x[1], x[2], x[3], rk, XBOX);  // Decryption
+        DEC_ROUND_FUNCTION(x[4], x[0], x[1], x[2], x[3], rk);  // Decryption
     }
 
     /* Reverse R(X32 X33 X34 X35) = (X35 X34 X33 X32) */

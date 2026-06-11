@@ -12,7 +12,20 @@
 \end{figure}
 
 以默认循环实现(\texttt{default\_loop})为基准,所有方案在每个数据规模下的运行时间(elapsed\_us)、吞吐率(throughput\_mbps)和加速比(speedup)及其均值数据汇总如下。
-
+\begin{table}[H]
+\centering
+\caption{不同输入规模对应的重复次数}
+\label{tab:repeat-count}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{c|ccccccc}
+\toprule
+输入规模 & 1 KB & 16 KB & 64 KB & 256 KB & 1 MB & 4 MB & 16 MB \\
+\midrule
+重复次数 & 2000 & 200 & 50 & 20 & 5 & 2 & 1 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
 % ===== 表1: 运行时间 =====
 
 \begin{table}[H]
