@@ -49,7 +49,7 @@ srli t2,x,22
 or   t1,t1,t2
 \end{asmcode}
 即:
-\[  (x << 10)| (x >> 2)   \]
+\[  (x << 10)| (x >> 22)   \]
 这需要2次shift和1次or共3条指令,对于SM4每轮的四次ROL则总共需要12条指令。Zbb拓展提供rori(Rotate Right Immediate)指令,
 可直接实现一次ROL操作,因此每轮L变换仅需4条指令即可完成。
 \end{itemize}

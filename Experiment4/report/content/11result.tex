@@ -1,75 +1,142 @@
 \section{性能测试对比}
-针对上述对SM4加密算法性能的7种优化方案,分别在7种不同输入数据规模(1 KB至16 MB)下测试程序的运行时间并计算吞吐率与加速比,过程截图如下:
+针对上述 7 种 SM4 实现方案,分别在7种不同输入数据规模(1 KB至16 MB)下测试程序的运行时间并计算吞吐率与加速比,过程截图如下:
 \begin{figure}[H]
     \centering
-    \includegraphics[width = 1\textwidth]{figure/more_test_data.png}
-    \caption{对比测试各种优化方案效率}
+    \includegraphics[width = 1\textwidth]{figure/more_test_data_1.png}
+    \caption{对比测试各种优化方案效率(1 KB至256 KB)}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width = 1\textwidth]{figure/more_test_data_2.png}
+    \caption{对比测试各种优化方案效率(和上图同属一次测试，1 MB至16 MB)}
 \end{figure}
 
-以默认循环实现(\texttt{default\_loop})为基准,所有方案在每个数据规模下的运行时间(elapsed\_us)、吞吐率(throughput\_mbps)和加速比(speedup)数据汇总如下。
+以默认循环实现(\texttt{default\_loop})为基准,所有方案在每个数据规模下的运行时间(elapsed\_us)、吞吐率(throughput\_mbps)和加速比(speedup)及其均值数据汇总如下。
 
 % ===== 表1: 运行时间 =====
+
 \begin{table}[H]
 \centering
-\caption{各方案在不同数据规模下的运行时间 (单位: $\mu$s)}
+\caption{各方案在不同数据规模下的运行时间（单位：$\mu$s）}
 \label{tab:elapsed}
-\begin{tabular}{l|c|c|c|c|c|c|c}
+
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|c|c|c|c|c|c|c|c|}
 \toprule
-\textbf{数据规模} & \multicolumn{7}{c}{\textbf{运行时间 (elapsed\_us)}} \\
+\textbf{数据规模} & \multicolumn{7}{c}{\textbf{运行时间（elapsed\_us）}} \\
 \cline{2-8}
 & default\_loop & unrolled & reduced\_dep & xbox & xbox\_merged & zbb\_default & zbb\_xbox \\
 \midrule
-1 KB      & 88,841 & 78,583 & 88,687 & 68,904 & 53,699 & 78,315 & 54,234 \\
-16 KB     & 142,796 & 126,458 & 142,336 & 110,931 & 86,501 & 126,095 & 87,517 \\
-64 KB     & 143,178 & 127,542 & 142,332 & 111,035 & 86,475 & 126,130 & 87,639 \\
-256 KB    & 228,803 & 203,336 & 228,606 & 178,773 & 140,014 & 202,658 & 142,426 \\
-1 MB      & 229,550 & 204,633 & 229,899 & 180,639 & 142,883 & 203,861 & 144,758 \\
-4 MB      & 370,999 & 331,894 & 371,496 & 293,106 & 236,653 & 329,914 & 239,037 \\
-16 MB     & 753,325 & 675,472 & 753,503 & 600,482 & 493,941 & 671,899 & 500,540 \\
+1 KB   & 88,985  & 78,646  & 88,667  & 68,855  & 53,654  & 78,304  & 54,257  \\
+16 KB  & 142,619 & 126,819 & 142,404 & 111,273 & 86,488  & 126,302 & 87,457  \\
+64 KB  & 142,590 & 126,666 & 142,267 & 110,963 & 86,442  & 126,072 & 87,641  \\
+256 KB & 228,371 & 203,515 & 228,545 & 178,726 & 140,590 & 202,422 & 141,695 \\
+1 MB   & 229,836 & 204,846 & 229,905 & 180,256 & 143,154 & 203,986 & 145,103 \\
+4 MB   & 371,702 & 332,203 & 371,888 & 294,034 & 235,837 & 331,001 & 240,526 \\
+16 MB  & 755,323 & 679,364 & 755,850 & 604,573 & 496,229 & 674,897 & 503,239 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
+
 \end{table}
+
 
 % ===== 表2: 吞吐率 =====
 \begin{table}[H]
 \centering
-\caption{各方案在不同数据规模下的吞吐率 (单位: MB/s)}
+\caption{各方案在不同数据规模下的吞吐率（单位：MB/s）}
 \label{tab:throughput}
-\begin{tabular}{l|c|c|c|c|c|c|c}
+
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|c|c|c|c|c|c|c|c|}
 \toprule
-\textbf{数据规模} & \multicolumn{7}{c}{\textbf{吞吐率 (throughput\_mbps)}} \\
+\multirow{2}{*}{\textbf{数据规模}}
+& \multicolumn{7}{c|}{\textbf{吞吐率（throughput\_mbps）}} \\
 \cline{2-8}
-& default\_loop & unrolled & reduced\_dep & xbox & xbox\_merged & zbb\_default & zbb\_xbox \\
+& default\_loop
+& unrolled
+& reduced\_dep
+& xbox
+& xbox\_merged
+& zbb\_default
+& zbb\_xbox \\
 \midrule
-1 KB      & 21.985 & 24.854 & 22.023 & 28.346 & 36.372 & 24.939 & 36.013 \\
-16 KB     & 21.884 & 24.712 & 21.955 & 28.171 & 36.127 & 24.783 & 35.707 \\
-64 KB     & 21.826 & 24.502 & 21.956 & 28.144 & 36.138 & 24.776 & 35.658 \\
-256 KB    & 21.853 & 24.590 & 21.872 & 27.968 & 35.711 & 24.672 & 35.106 \\
-1 MB      & 21.782 & 24.434 & 21.749 & 27.680 & 34.994 & 24.527 & 34.540 \\
-4 MB      & 21.563 & 24.104 & 21.535 & 27.294 & 33.805 & 24.249 & 33.468 \\
-16 MB     & 21.239 & 23.687 & 21.234 & 26.645 & 32.393 & 23.813 & 31.965 \\
+1 KB   & 21.949 & 24.834 & 22.028 & 28.366 & 36.402 & 24.943 & 35.998 \\
+16 KB  & 21.912 & 24.641 & 21.945 & 28.084 & 36.132 & 24.742 & 35.732 \\
+64 KB  & 21.916 & 24.671 & 21.966 & 28.163 & 36.151 & 24.787 & 35.657 \\
+256 KB & 21.894 & 24.568 & 21.878 & 27.976 & 35.564 & 24.701 & 35.287 \\
+1 MB   & 21.755 & 24.409 & 21.748 & 27.738 & 34.927 & 24.511 & 34.458 \\
+4 MB   & 21.523 & 24.082 & 21.512 & 27.208 & 33.922 & 24.169 & 33.260 \\
+16 MB  & 21.183 & 23.551 & 21.168 & 26.465 & 32.243 & 23.707 & 31.794 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
+
 
 % ===== 表3: 加速比 =====
 \begin{table}[H]
 \centering
-\caption{各方案在不同数据规模下的加速比 (基准: default\_loop)}
+\caption{各方案在不同数据规模下的加速比（基准：default\_loop）}
 \label{tab:speedup}
-\begin{tabular}{l|c|c|c|c|c|c}
+
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|c|c|c|c|c|c|c|}
 \toprule
-\textbf{数据规模} & \multicolumn{6}{c}{\textbf{加速比 (speedup, $\times$ vs baseline)}} \\
+\multirow{2}{*}{\textbf{数据规模}}
+& \multicolumn{6}{c|}{\textbf{加速比（speedup，$\times$ vs baseline）}} \\
 \cline{2-7}
-& unrolled & reduced\_dep & xbox & xbox\_merged & zbb\_default & zbb\_xbox \\
+& unrolled
+& reduced\_dep
+& xbox
+& xbox\_merged
+& zbb\_default
+& zbb\_xbox \\
 \midrule
-1 KB      & 1.1305 & 1.0017 & 1.2893 & 1.6544 & 1.1344 & 1.6381 \\
-16 KB     & 1.1292 & 1.0032 & 1.2873 & 1.6508 & 1.1324 & 1.6316 \\
-64 KB     & 1.1226 & 1.0059 & 1.2895 & 1.6557 & 1.1352 & 1.6337 \\
-256 KB    & 1.1252 & 1.0009 & 1.2799 & 1.6341 & 1.1290 & 1.6065 \\
-1 MB      & 1.1218 & 0.9985 & 1.2708 & 1.6066 & 1.1260 & 1.5858 \\
-4 MB      & 1.1178 & 0.9987 & 1.2658 & 1.5677 & 1.1245 & 1.5521 \\
-16 MB     & 1.1153 & 0.9998 & 1.2545 & 1.5251 & 1.1212 & 1.5050 \\
+1 KB   & 1.1315 & 1.0036 & 1.2924 & 1.6585 & 1.1364 & 1.6401 \\
+16 KB  & 1.1246 & 1.0015 & 1.2817 & 1.6490 & 1.1292 & 1.6307 \\
+64 KB  & 1.1257 & 1.0023 & 1.2850 & 1.6495 & 1.1310 & 1.6270 \\
+256 KB & 1.1221 & 0.9992 & 1.2778 & 1.6244 & 1.1282 & 1.6117 \\
+1 MB   & 1.1220 & 0.9997 & 1.2751 & 1.6055 & 1.1267 & 1.5840 \\
+4 MB   & 1.1189 & 0.9995 & 1.2641 & 1.5761 & 1.1230 & 1.5454 \\
+16 MB  & 1.1118 & 0.9993 & 1.2493 & 1.5221 & 1.1192 & 1.5009 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
+
+% ===== 表4: 加速比均值 =====
+为综合评价各优化方案在不同输入数据规模下的整体性能，进一步对表 3 中各方案的加速比计算几何平均值，
+结果如表 4 所示。与算术平均值相比，几何平均值更适合汇总不同测试规模下的相对性能提升，
+可以避免个别数据规模对整体结论产生过大的影响。
+
+\begin{table}[H]
+\centering
+\caption{各方案在全部数据规模下的几何平均加速比}
+\label{tab:average-speedup}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|c|c|c|c|c|c|c|c|}
+\toprule
+方案
+& default\_loop
+& unrolled
+& reduced\_dep
+& xbox
+& xbox\_merged
+& zbb\_default
+& zbb\_xbox \\
+\midrule
+几何平均加速比
+& 1.0000
+& 1.1224
+& 1.0007
+& 1.2750
+& 1.6115
+& 1.1277
+& 1.5907 \\
+\bottomrule
+\end{tabular}%
+}
+
+\end{table}
+
